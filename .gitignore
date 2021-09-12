@@ -1,0 +1,15 @@
+node_modules
+.env
+.DS_Store
+.secret
+
+#Hardhat config
+cache
+artifacts
+typechain
+.vscode/
+
+# hardhat coverage
+coverage
+coverage.json
+
