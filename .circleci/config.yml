@@ -41,9 +41,8 @@ jobs:
       - checkout
       - restore_cache:
           key: lyra-{{ .Environment.CIRCLE_SHA1 }}
-      - run:
-          name: Install packages
-          command: yarn install
+      - restore_cache:
+          key: dependency-cache-{{ checksum "package.json" }}
       - run:
           name: Lint
           command: yarn lint

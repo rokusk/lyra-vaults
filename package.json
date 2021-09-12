@@ -18,7 +18,7 @@
     "seedTest": "hardhat run scripts/seedTest.ts",
     "docify": "node docify.js",
     "docgen": "yarn doc:uml && yarn docify",
-    "lint": "yarn run lint:sol && yarn run lint:ts && yarn run prettier:list-different",
+    "lint": "yarn run lint:sol && yarn run lint:ts",
     "lint:fix": "yarn run lint:sol:fix && yarn run lint:ts:fix",
     "lint:sol": "solhint \"contracts/**/*.sol\"",
     "lint:sol:fix": "yarn lint:sol --fix",
@@ -28,7 +28,6 @@
     "prettier:ts": "prettier --config .prettierrc --write \"**/*.{js,ts}\"",
     "prettier:json:md": "prettier --config .prettierrc --write \"**/*.{json,md}\"",
     "prettier": "yarn prettier:sol && yarn prettier:ts",
-    "prettier:list-different": "prettier --config .prettierrc --list-different \"**/*.{js,sol,ts}\"",
     "size": "hardhat size-contracts",
     "gas-report": "REPORT_GAS=true npm run test"
   },
