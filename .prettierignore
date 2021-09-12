@@ -8,6 +8,8 @@ node_modules/
 typechain/
 contracts/mocks/
 contracts/test/
+coverage/
 
 # files
 package.json
+.solcover.js
