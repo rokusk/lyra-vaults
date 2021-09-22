@@ -8,7 +8,11 @@ import "./IExchanger.sol";
 import "./ISynthetix.sol";
 
 interface ILyraGlobals {
-  enum ExchangeType {BASE_QUOTE, QUOTE_BASE, ALL}
+  enum ExchangeType {
+    BASE_QUOTE,
+    QUOTE_BASE,
+    ALL
+  }
 
   /**
    * @dev Structs to help reduce the number of calls between other contracts and this one

@@ -32,7 +32,12 @@ interface IOptionMarket {
     ILiquidityPool.Liquidity liquidity;
   }
 
-  enum TradeType {LONG_CALL, SHORT_CALL, LONG_PUT, SHORT_PUT}
+  enum TradeType {
+    LONG_CALL,
+    SHORT_CALL,
+    LONG_PUT,
+    SHORT_PUT
+  }
 
   enum Error {
     TransferOwnerToZero,
