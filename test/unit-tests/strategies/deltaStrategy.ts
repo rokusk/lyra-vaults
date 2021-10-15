@@ -4,11 +4,18 @@ import { expect } from "chai";
 
 describe('Delta Vault Strategy', async () => {
 
-  it('deploy', async() => {
-    const DeltaStrategy = await ethers.getContractFactory("DeltaStrategy");
-    const vault = await DeltaStrategy.deploy() as DeltaStrategy;
-
-    const address1 = await vault.lyra();
-    expect(address1).to.be.eq(ethers.constants.AddressZero)
+  describe('deployment', async() => {
+    it('deploy strategy', async() => {
+      const DeltaStrategy = await ethers.getContractFactory("DeltaStrategy");
+      const strategy = await DeltaStrategy.deploy(ethers.constants.AddressZero, ethers.constants.AddressZero) as DeltaStrategy;
+  
+      expect(await strategy.optionMarketViwer()).to.be.eq(ethers.constants.AddressZero)
+      expect(await strategy.blackScholes()).to.be.eq(ethers.constants.AddressZero)
+    })
+  })
+  
+  describe('set strategy', async() => {
+    it('setting strategy should update isRoundReady and roundStrategy', async() => {})
+    it('should revert if setStrategy is not called by owner', async() => {})
   })
 })
