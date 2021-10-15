@@ -19,7 +19,11 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
   mapping(uint => bool) public isReadyForRound;
   mapping(uint => DeltaStrategyDetail) public strategyForRound;
 
-  constructor(address _vault, address _blackScholes, address _optionMarketViewer) {
+  constructor(
+    address _vault,
+    address _blackScholes,
+    address _optionMarketViewer
+  ) {
     vault = _vault;
     blackScholes = _blackScholes;
     optionMarketViwer = _optionMarketViewer;
@@ -38,7 +42,16 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
   /**
    * request trade detail according to the strategy.
    */
-  function requestTrade() external pure override returns (uint listingId, uint size, uint minPremium) {
+  function requestTrade()
+    external
+    pure
+    override
+    returns (
+      uint listingId,
+      uint size,
+      uint minPremium
+    )
+  {
     listingId = _getListing();
     size = _getSize();
     minPremium = _getExpectedPremium(listingId, size);
@@ -52,7 +65,7 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
   }
 
   /**
-   * @dev get the target listing id to trade on. 
+   * @dev get the target listing id to trade on.
    * with delta vault strategy, this will be looping through all potential listings and find the closest iv
    */
   function _getListing() internal pure returns (uint listingId) {
