@@ -87,6 +87,14 @@ interface IOptionMarket {
 
   function listingToBaseReturnedRatio(uint) external view returns (uint);
 
+  function settleOptions(uint listingId, TradeType tradeType) external;
+
+  function openPosition(
+    uint _listingId,
+    TradeType tradeType,
+    uint amount
+  ) external returns (uint totalCost);
+
   function transferOwnership(address newOwner) external;
 
   function setBoardFrozen(uint boardId, bool frozen) external;
