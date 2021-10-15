@@ -27,7 +27,7 @@ describe('Delta Vault Strategy', async () => {
     })
   })
   
-  describe('set strategy', async() => {
+  describe('setStrategy', async() => {
     it('setting strategy should update isRoundReady and roundStrategy', async() => {
       const roundId = 1
       const strategyBytes = constants.AddressZero
@@ -38,7 +38,20 @@ describe('Delta Vault Strategy', async () => {
       await expect(strategy.connect(randomUser).setStrategy(0, constants.AddressZero)).to.be.revertedWith(
         'Ownable: caller is not the owner'
       )
-      
+    })
+  })
+
+  describe('getExpectedPremium', async() => {
+    // todo: update test case
+    it('should return 0 if ...', async() => {
+      expect((await strategy.getExpectedPremium(0 , 0)).isZero()).to.be.true 
+    })
+  })
+
+  describe('checkPostTrade', async() => {
+    // todo: update test case
+    it('should return true if ...', async() => {
+      expect(await strategy.checkPostTrade()).to.be.true 
     })
   })
 })
