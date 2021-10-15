@@ -15,8 +15,9 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
     uint128 maxIv; // should not trade is iv is above this number
     uint128 minIv; // should not trade is iv is below this number
     uint128 size;
+    uint128 minInterval;
   }
-  
+
   DeltaStrategyDetail public currentStrategy;
 
   constructor(
@@ -35,12 +36,11 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
    */
   function setStrategy(bytes memory strategyBytes) external override onlyOwner {
     //todo: check that the vault is in a state that allow changing strategy
-    (uint128 maxIv, uint128 minIv, uint128 size) = abi.decode(strategyBytes, (uint128, uint128, uint128));
-    currentStrategy = DeltaStrategyDetail({
-      maxIv: maxIv,
-      minIv: minIv,
-      size: size
-    });
+    (uint128 maxIv, uint128 minIv, uint128 size, uint128 minInterval) = abi.decode(
+      strategyBytes,
+      (uint128, uint128, uint128, uint128)
+    );
+    currentStrategy = DeltaStrategyDetail({maxIv: maxIv, minIv: minIv, size: size, minInterval: minInterval});
     //todo: set the round status on vault
     // vault.startWithdrawPeriod
   }
@@ -50,7 +50,7 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
    */
   function requestTrade()
     external
-    pure
+    view
     override
     returns (
       uint listingId,
@@ -81,8 +81,8 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
   /**
    * @dev get the size of trade.
    */
-  function _getSize() internal pure returns (uint size) {
-    size = 0;
+  function _getSize() internal view returns (uint size) {
+    size = currentStrategy.size;
   }
 
   /**

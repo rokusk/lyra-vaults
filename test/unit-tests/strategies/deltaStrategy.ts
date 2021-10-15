@@ -3,6 +3,7 @@ import { DeltaStrategy } from '../../../typechain';
 import { expect } from "chai";
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { constants } from 'ethers';
+import { encodeDeltaStrategy } from './utils';
 
 describe('Delta Vault Strategy', async () => {
 
@@ -30,10 +31,14 @@ describe('Delta Vault Strategy', async () => {
   
   describe('setStrategy', async() => {
     it('setting strategy should update isRoundReady and roundStrategy', async() => {
-      const roundId = 1
-      const strategyBytes = constants.AddressZero
+      const strategyBytes = encodeDeltaStrategy(0, 0, 0, 0)
       await strategy.connect(manager).setStrategy(strategyBytes)
       
+      const newStrategy = await strategy.currentStrategy()
+      expect(newStrategy.minInterval.isZero()).to.be.true
+      expect(newStrategy.maxIv.isZero()).to.be.true
+      expect(newStrategy.minInterval.isZero()).to.be.true
+      expect(newStrategy.size.isZero()).to.be.true
     })
     it('should revert if setStrategy is not called by owner', async() => {
       await expect(strategy.connect(randomUser).setStrategy(constants.AddressZero)).to.be.revertedWith(
