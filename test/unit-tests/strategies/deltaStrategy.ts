@@ -32,11 +32,11 @@ describe('Delta Vault Strategy', async () => {
     it('setting strategy should update isRoundReady and roundStrategy', async() => {
       const roundId = 1
       const strategyBytes = constants.AddressZero
-      await strategy.connect(manager).setStrategy(roundId, strategyBytes)
-      expect(await strategy.isReadyForRound(roundId)).to.be.true 
+      await strategy.connect(manager).setStrategy(strategyBytes)
+      
     })
     it('should revert if setStrategy is not called by owner', async() => {
-      await expect(strategy.connect(randomUser).setStrategy(0, constants.AddressZero)).to.be.revertedWith(
+      await expect(strategy.connect(randomUser).setStrategy(constants.AddressZero)).to.be.revertedWith(
         'Ownable: caller is not the owner'
       )
     })

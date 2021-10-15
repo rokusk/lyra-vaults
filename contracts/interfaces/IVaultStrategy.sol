@@ -4,7 +4,7 @@ pragma solidity ^0.7.6;
 import {IOptionMarket} from "./IOptionMarket.sol";
 
 interface IVaultStrategy {
-  function setStrategy(uint roundId, bytes memory strategyBytes) external;
+  function setStrategy(bytes memory strategyBytes) external;
 
   function requestTrade()
     external

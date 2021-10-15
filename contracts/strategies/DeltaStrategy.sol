@@ -12,12 +12,12 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
 
   // example strategy detail
   struct DeltaStrategyDetail {
-    uint128 maxIv;
+    uint128 maxIv; // should not trade is iv is above this number
+    uint128 minIv; // should not trade is iv is below this number
     uint128 size;
   }
-
-  mapping(uint => bool) public isReadyForRound;
-  mapping(uint => DeltaStrategyDetail) public strategyForRound;
+  
+  DeltaStrategyDetail public currentStrategy;
 
   constructor(
     address _vault,
@@ -30,11 +30,17 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
   }
 
   /**
-   
+   * @dev update the strategy for the new round.
+   * @param strategyBytes decoded strategy data
    */
-  function setStrategy(uint roundId, bytes memory strategyBytes) external override onlyOwner {
-    isReadyForRound[roundId] = true;
-
+  function setStrategy(bytes memory strategyBytes) external override onlyOwner {
+    //todo: check that the vault is in a state that allow changing strategy
+    (uint128 maxIv, uint128 minIv, uint128 size) = abi.decode(strategyBytes, (uint128, uint128, uint128));
+    currentStrategy = DeltaStrategyDetail({
+      maxIv: maxIv,
+      minIv: minIv,
+      size: size
+    });
     //todo: set the round status on vault
     // vault.startWithdrawPeriod
   }
@@ -54,7 +60,7 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
   {
     listingId = _getListing();
     size = _getSize();
-    minPremium = _getExpectedPremium(listingId, size);
+    minPremium = _getMinPremium(listingId, size);
   }
 
   /**
@@ -79,7 +85,13 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
     size = 0;
   }
 
-  function _getExpectedPremium(uint listingId, uint size) internal pure returns (uint minPremium) {
+  /**
+   * @dev get minimum premium that the vault should receive.
+   * @param listingId lyra option listing id
+   * @param size size of trade
+   * @return minPremium the min amount of sUSD the vault should receive
+   */
+  function _getMinPremium(uint listingId, uint size) internal pure returns (uint minPremium) {
     // todo: request blacksholes to get premium without fee
     // todo: apply constant logic to get min premium
     minPremium = 0;
