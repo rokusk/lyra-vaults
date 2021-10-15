@@ -8,13 +8,10 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract VaultBase is ERC20, ReentrancyGuard {
-  
-    using SafeERC20 for IERC20;
-    using SafeMath for uint256;
+  using SafeERC20 for IERC20;
+  using SafeMath for uint;
 
-    address public asset;
+  address public asset;
 
-    constructor(string memory _name, string memory _symbol) ERC20(_name, _symbol) {
-        
-    }
+  constructor(string memory _name, string memory _symbol) ERC20(_name, _symbol) {}
 }

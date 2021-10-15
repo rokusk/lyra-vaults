@@ -1,40 +1,37 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.7.0;
 
-import {IVaultStrategy} from  "../interfaces/IVaultStrategy.sol";
+import {IVaultStrategy} from "../interfaces/IVaultStrategy.sol";
 import {IOptionMarket} from "../interfaces/IOptionMarket.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-
 contract DeltaStrategy is IVaultStrategy, Ownable {
-    address public immutable blackScholes;
-    address public immutable optionMarketViwer;
+  address public immutable blackScholes;
+  address public immutable optionMarketViwer;
 
-    constructor(address _blackScholes, address _optionMarketViewer) {
-        blackScholes = _blackScholes;
-        optionMarketViwer = _optionMarketViewer;
-    }
+  // example strategy detail
+  struct DeltaStrategyDetail {
+    uint128 maxIv;
+    uint128 maxSize;
+  }
 
-    function setStrategy(uint256 roundId, bytes memory strategyBytes) 
-        override
-        external 
-        onlyOwner
-    {
-        
-    }
+  mapping(uint => bool) public isReadyForRound;
+  mapping(uint => DeltaStrategyDetail) public strategyForRound;
 
-    /**
-     */
-    function getExpectedPremium(uint256 listingId, uint256 amount) 
-        override
-        external 
-        view 
-        returns (uint256 expectedPremium) 
-    {
-        expectedPremium = 0;
-    }
+  constructor(address _blackScholes, address _optionMarketViewer) {
+    blackScholes = _blackScholes;
+    optionMarketViwer = _optionMarketViewer;
+  }
 
-    function checkPostTrade() override external view returns (bool isValid) {
-        isValid = true;
-    }
+  function setStrategy(uint roundId, bytes memory strategyBytes) external override onlyOwner {
+    isReadyForRound[roundId] = true;
+  }
+
+  function getExpectedPremium(uint listingId, uint amount) external view override returns (uint expectedPremium) {
+    expectedPremium = 0;
+  }
+
+  function checkPostTrade() external view override returns (bool isValid) {
+    isValid = true;
+  }
 }
