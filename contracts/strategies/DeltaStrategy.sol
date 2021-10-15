@@ -7,10 +7,12 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 
 contract DeltaStrategy is IVaultStrategy, Ownable {
-    address public immutable optionMarket;
+    address public immutable blackScholes;
+    address public immutable optionMarketViwer;
 
-    constructor(address _optionMarket) {
-        optionMarket = _optionMarket;
+    constructor(address _blackScholes, address _optionMarketViewer) {
+        blackScholes = _blackScholes;
+        optionMarketViwer = _optionMarketViewer;
     }
 
     function setStrategy(uint256 roundId, bytes memory strategyBytes) 
