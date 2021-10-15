@@ -6,7 +6,7 @@ import {IOptionMarket} from "./IOptionMarket.sol";
 interface IVaultStrategy {
   function setStrategy(uint roundId, bytes memory strategyBytes) external;
 
-  function getExpectedPremium(uint listingId, uint amount) external view returns (uint);
+  function requestTrade() external view returns (uint listingId, uint amount, uint minPremium);
 
   function checkPostTrade() external view returns (bool);
 }

@@ -20,8 +20,9 @@ describe('Delta Vault Strategy', async () => {
   describe('deployment', async() => {
     it('deploy strategy', async() => {
       const DeltaStrategy = await ethers.getContractFactory("DeltaStrategy");
-      strategy = await DeltaStrategy.deploy(ethers.constants.AddressZero, ethers.constants.AddressZero) as DeltaStrategy;
+      strategy = await DeltaStrategy.deploy(ethers.constants.AddressZero, ethers.constants.AddressZero, ethers.constants.AddressZero) as DeltaStrategy;
   
+      expect(await strategy.vault()).to.be.eq(ethers.constants.AddressZero)
       expect(await strategy.optionMarketViwer()).to.be.eq(ethers.constants.AddressZero)
       expect(await strategy.blackScholes()).to.be.eq(ethers.constants.AddressZero)
     })
@@ -41,10 +42,13 @@ describe('Delta Vault Strategy', async () => {
     })
   })
 
-  describe('getExpectedPremium', async() => {
+  describe('requestTrade', async() => {
     // todo: update test case
-    it('should return 0 if ...', async() => {
-      expect((await strategy.getExpectedPremium(0 , 0)).isZero()).to.be.true 
+    it('should return correct size, listing id, premium', async() => {
+      const { size, minPremium, listingId } = await strategy.requestTrade()
+      expect(size.isZero()).to.be.true 
+      expect(minPremium.isZero()).to.be.true 
+      expect(listingId.isZero()).to.be.true 
     })
   })
 
