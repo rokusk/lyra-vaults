@@ -4,15 +4,19 @@ pragma solidity ^0.7.0;
 import {IVaultStrategy} from "../interfaces/IVaultStrategy.sol";
 
 contract MockStrategy is IVaultStrategy {
-
   uint public mockedListingId;
   uint public mockedSize;
   uint public mockedMinPremium;
 
+  function setStrategy(
+    bytes memory /*strategyBytes*/
+  ) external override {}
 
-  function setStrategy(bytes memory /*strategyBytes*/) external override {}
-
-  function setMockedTradeRequest(uint _listingId, uint _size, uint _minPremium ) public {
+  function setMockedTradeRequest(
+    uint _listingId,
+    uint _size,
+    uint _minPremium
+  ) public {
     mockedListingId = _listingId;
     mockedSize = _size;
     mockedMinPremium = _minPremium;
@@ -40,5 +44,4 @@ contract MockStrategy is IVaultStrategy {
   function checkPostTrade() external pure override returns (bool isValid) {
     isValid = true;
   }
-
 }
