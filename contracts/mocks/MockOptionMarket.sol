@@ -5,12 +5,19 @@ import {IOptionMarket} from "../interfaces/IOptionMarket.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract MockOptionMarket {
-  address public token;
-  uint public cost;
+  address public collateralToken;
+  address public premiumToken;
+  uint public premium;
+  uint public collateral;
 
-  function setMockCost(address _token, uint _cost) external {
-    token = _token;
-    cost = _cost;
+  function setMockPremium(address _token, uint _premium) external {
+    premiumToken = _token;
+    premium = _premium;
+  }
+
+  function setMockCollateral(address _token, uint _collateralAmount) external {
+    collateralToken = _token;
+    collateral = _collateralAmount;
   }
 
   function openPosition(
@@ -18,8 +25,11 @@ contract MockOptionMarket {
     IOptionMarket.TradeType, /*tradeType*/
     uint /*amount*/
   ) external returns (uint totalCost) {
-    IERC20(token).transferFrom(msg.sender, address(this), cost);
+    
+    IERC20(collateralToken).transferFrom(msg.sender, address(this), collateral);
+    
+    IERC20(premiumToken).transfer(msg.sender, premium);
     // todo: mint mocked certificate?
-    return cost;
+    return premium;
   }
 }

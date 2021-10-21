@@ -8,6 +8,8 @@ contract MockStrategy is IVaultStrategy {
   uint public mockedSize;
   uint public mockedMinPremium;
 
+  bool public isValid;
+
   function setStrategy(
     bytes memory /*strategyBytes*/
   ) external override {}
@@ -20,6 +22,10 @@ contract MockStrategy is IVaultStrategy {
     mockedListingId = _listingId;
     mockedSize = _size;
     mockedMinPremium = _minPremium;
+  }
+
+  function setMockedPostCheck(bool _isValid) external {
+    isValid = _isValid;
   }
 
   /**
@@ -41,7 +47,7 @@ contract MockStrategy is IVaultStrategy {
   /**
    * @dev this should be executed after the vault execute trade on OptionMarket
    */
-  function checkPostTrade() external pure override returns (bool isValid) {
-    isValid = true;
+  function checkPostTrade() external view override returns (bool) {
+    return isValid;
   }
 }

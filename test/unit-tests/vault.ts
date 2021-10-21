@@ -1,7 +1,8 @@
+import { parseUnits } from '@ethersproject/units';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { LyraVault, MockOptionMarket, MockStrategy } from '../../typechain';
+import { LyraVault, MockOptionMarket, MockStrategy, MockERC20 } from '../../typechain';
 
 describe('Vault', async () => {
   // contract instances
@@ -10,6 +11,9 @@ describe('Vault', async () => {
   // mocked contracts
   let mockedStrategy: MockStrategy;
   let mockedMarket: MockOptionMarket;
+  
+  let weth: MockERC20
+  let susd: MockERC20
 
   // signers
   let random: SignerWithAddress;
@@ -27,12 +31,17 @@ describe('Vault', async () => {
 
     const MockStrategyFactory = await ethers.getContractFactory('MockStrategy');
     mockedStrategy = (await MockStrategyFactory.deploy()) as MockStrategy;
+
+    const MockERC20Factory = await ethers.getContractFactory('MockERC20');
+    weth = (await MockERC20Factory.deploy('Wrapped ETH', 'WETH', 18)) as MockERC20;
+    susd = (await MockERC20Factory.deploy('Synth USD', 'sUSD', 18)) as MockERC20;
   });
 
   describe('deploy', async () => {
     it('should successfully deploy and set immutable addresses', async () => {
       const LyraVault = await ethers.getContractFactory('LyraVault');
-      vault = (await LyraVault.deploy(mockedMarket.address)) as LyraVault;
+      vault = (await LyraVault.deploy(weth.address, mockedMarket.address)) as LyraVault;
+      expect(await vault.asset()).to.be.eq(weth.address);
       expect(await vault.optionMarket()).to.be.eq(mockedMarket.address);
     });
   });
@@ -50,7 +59,51 @@ describe('Vault', async () => {
     });
   });
 
-  describe('trade', async () => {
-    before('');
+  describe('trade flow tests', async () => {
+    const size = parseUnits('1')
+    const collateralAmount = parseUnits('1')
+
+    // mock premium to 50 USD
+    const minPremium = parseUnits('50')
+
+    before('mint weth for vault', async() => {
+      //todo: change this to deposit
+      await weth.mint(vault.address, parseUnits('50'))
+    });
+    before('mint asset for option market', async() => {
+      await susd.mint(mockedMarket.address, parseUnits('100000'))
+    })
+
+    it('should revert if premium get from market is lower than strategy estimation', async() => {
+      // set request and check result
+      await mockedStrategy.setMockedTradeRequest(0, size, minPremium.add(1))
+
+      await mockedMarket.setMockCollateral(weth.address, collateralAmount)
+      await mockedMarket.setMockPremium(susd.address, minPremium)
+
+      await expect(vault.trade()).to.be.revertedWith('premium too low')
+    })
+
+    it('should revert if post trade check return false', async() => {
+      await mockedStrategy.setMockedTradeRequest(0, size, minPremium)
+      await mockedStrategy.setMockedPostCheck(false)
+      await expect(vault.trade()).to.be.revertedWith('bad trade')
+    })
+
+    it('should successfully trade with returned amount', async() => {
+      // set request and check result
+      await mockedStrategy.setMockedTradeRequest(0, size, minPremium)
+      await mockedStrategy.setMockedPostCheck(true)
+
+      await mockedMarket.setMockCollateral(weth.address, collateralAmount)
+      await mockedMarket.setMockPremium(susd.address, minPremium)
+
+      const wethBefore = await weth.balanceOf(vault.address)
+      await vault.trade()  
+      const wethAfter = await weth.balanceOf(vault.address)
+
+      expect(wethBefore.sub(wethAfter).eq(collateralAmount)).to.be.true
+    })
+
   });
 });
