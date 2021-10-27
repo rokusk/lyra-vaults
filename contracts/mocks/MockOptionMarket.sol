@@ -25,9 +25,8 @@ contract MockOptionMarket {
     IOptionMarket.TradeType, /*tradeType*/
     uint /*amount*/
   ) external returns (uint totalCost) {
-    
     IERC20(collateralToken).transferFrom(msg.sender, address(this), collateral);
-    
+
     IERC20(premiumToken).transfer(msg.sender, premium);
     // todo: mint mocked certificate?
     return premium;

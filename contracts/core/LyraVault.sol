@@ -20,7 +20,7 @@ contract LyraVault is Ownable {
     asset = IERC20(_asset);
     optionMarket = IOptionMarket(_optionMarket);
 
-    IERC20(_asset).approve(_optionMarket, uint256(-1));
+    IERC20(_asset).approve(_optionMarket, uint(-1));
   }
 
   /// @dev set strategy contract. This function can only be called by owner.
