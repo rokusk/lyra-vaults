@@ -6,8 +6,6 @@ dist/
 lib/
 node_modules/
 typechain/
-contracts/mocks/
-contracts/test/
 coverage/
 
 # files
