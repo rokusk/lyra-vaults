@@ -10,18 +10,12 @@ import {ShareMath} from "./ShareMath.sol";
 import {IERC20Detailed} from "../interfaces/IERC20Detailed.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
+/**
+ * @dev copied from Ribbon's VaultLifeCycle, changed to internal library for gas optimization
+ */
 library VaultLifecycle {
   using SafeMath for uint;
   using SafeERC20 for IERC20;
-
-  struct CloseParams {
-    address OTOKEN_FACTORY;
-    address USDC;
-    address currentOption;
-    uint delay;
-    uint16 lastStrikeOverrideRound;
-    uint overriddenStrikePrice;
-  }
 
   /**
      * @notice Calculate the shares to mint, new price per share, and
@@ -42,7 +36,7 @@ library VaultLifecycle {
     uint pendingAmount,
     uint queuedWithdrawShares
   )
-    external
+    internal
     view
     returns (
       uint newLockedAmount,
@@ -75,7 +69,7 @@ library VaultLifecycle {
      * @param gammaController is the address of the opyn controller contract
      * @return amount of collateral redeemed from the vault
      */
-  function settleShort(address gammaController) external returns (uint) {}
+  function settleShort(address gammaController) internal returns (uint) {}
 
   /**
    * @notice Calculates the performance and management fee for this week's round
@@ -93,7 +87,7 @@ library VaultLifecycle {
     uint performanceFeePercent,
     uint managementFeePercent
   )
-    external
+    internal
     view
     returns (
       uint performanceFeeInAsset,

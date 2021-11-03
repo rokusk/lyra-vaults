@@ -41,9 +41,6 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
   /// @notice Vault's lifecycle state like round and locked amounts
   Vault.VaultState public vaultState;
 
-  /// @notice Vault's state of the options sold and the timelocked option
-  Vault.OptionState public optionState;
-
   /// @notice Fee recipient for the performance and management fees
   address public feeRecipient;
 
@@ -67,12 +64,6 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
 
   /// @notice WETH contract address
   address public immutable WETH;
-
-  /// @notice 15 minute timelock between commitAndClose and rollToNexOption.
-  uint public constant DELAY = 15 minutes;
-
-  /// @notice 7 day period between each options sale.
-  uint public constant PERIOD = 7 days;
 
   // Number of weeks per year = 52.142857 weeks * FEE_MULTIPLIER = 52142857
   // Dividing by weeks per year requires doing num.mul(FEE_MULTIPLIER).div(WEEKS_PER_YEAR)
@@ -421,23 +412,10 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    * @notice Helper function that performs most administrative tasks
    * such as setting next option, minting new shares, getting vault fees, etc.
    * @param lastQueuedWithdrawAmount is old queued withdraw amount
-   * @return newOption is the new option address
    * @return lockedBalance is the new balance used to calculate next option purchase size or collateral size
    * @return queuedWithdrawAmount is the new queued withdraw amount for this round
    */
-  function _rollToNextOption(uint lastQueuedWithdrawAmount)
-    internal
-    returns (
-      address,
-      uint,
-      uint
-    )
-  {
-    require(block.timestamp >= optionState.nextOptionReadyAt, "!ready");
-
-    address newOption = optionState.nextOption;
-    require(newOption != address(0), "!nextOption");
-
+  function _rollToNextRound(uint lastQueuedWithdrawAmount) internal returns (uint, uint) {
     (uint lockedBalance, uint queuedWithdrawAmount, uint newPricePerShare, uint mintShares) = VaultLifecycle.rollover(
       totalSupply(),
       vaultParams.asset,
@@ -445,9 +423,6 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
       uint(vaultState.totalPending),
       vaultState.queuedWithdrawShares
     );
-
-    optionState.currentOption = newOption;
-    optionState.nextOption = address(0);
 
     // Finalize the pricePerShare at the end of the round
     uint currentRound = vaultState.round;
@@ -465,7 +440,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
 
     _mint(address(this), mintShares);
 
-    return (newOption, lockedBalance, queuedWithdrawAmount);
+    return (lockedBalance, queuedWithdrawAmount);
   }
 
   /*
@@ -576,18 +551,6 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
 
   function cap() external view returns (uint) {
     return vaultParams.cap;
-  }
-
-  function nextOptionReadyAt() external view returns (uint) {
-    return optionState.nextOptionReadyAt;
-  }
-
-  function currentOption() external view returns (address) {
-    return optionState.currentOption;
-  }
-
-  function nextOption() external view returns (address) {
-    return optionState.nextOption;
   }
 
   function totalPending() external view returns (uint) {

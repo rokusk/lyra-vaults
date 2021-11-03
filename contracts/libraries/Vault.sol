@@ -30,15 +30,6 @@ library Vault {
     address asset;
   }
 
-  struct OptionState {
-    // Option that the vault is shorting / longing in the next cycle
-    address nextOption;
-    // Option that the vault is currently shorting / longing
-    address currentOption;
-    // The timestamp when the `nextOption` can be used by the vault
-    uint32 nextOptionReadyAt;
-  }
-
   struct VaultState {
     // 32 byte slot 1
     //  Current round number. `round` represents the number of `period`s elapsed.

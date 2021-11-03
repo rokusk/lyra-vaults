@@ -16,10 +16,17 @@ contract LyraVault is Ownable, BaseVault {
 
   IVaultStrategy public strategy;
 
+  // Amount locked for scheduled withdrawals last week;
+  uint128 public lastQueuedWithdrawAmount;
+  // % of funds to be used for weekly option purchase
+  uint public optionAllocation;
+  // Delta vault equivalent of lockedAmount
+  uint public balanceBeforePremium;
+
   event StrategyUpdated(address strategy);
 
   constructor(
-    address _optionMarket, 
+    address _optionMarket,
     address _weth,
     address _feeRecipient,
     uint _managementFee,
@@ -52,5 +59,12 @@ contract LyraVault is Ownable, BaseVault {
     // todo: exchange sUSD => sETH
 
     require(strategy.checkPostTrade(), "bad trade");
+  }
+
+  function rollToNextRound() external {
+    (uint lockedBalance, uint queuedWithdrawAmount) = _rollToNextRound(uint(lastQueuedWithdrawAmount));
+
+    lastQueuedWithdrawAmount = uint128(queuedWithdrawAmount);
+    balanceBeforePremium = lockedBalance;
   }
 }
