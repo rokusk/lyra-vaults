@@ -43,4 +43,9 @@ contract LyraVault is Ownable {
 
     require(strategy.checkPostTrade(), "bad trade");
   }
+
+  /// @dev settle short positions
+  function settle() external {
+    // todo
+  }
 }
