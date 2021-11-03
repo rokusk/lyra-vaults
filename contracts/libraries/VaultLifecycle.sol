@@ -78,20 +78,6 @@ library VaultLifecycle {
   function settleShort(address gammaController) external returns (uint) {}
 
   /**
-   * @notice Exercises the ITM option using existing long otoken position. Currently this implementation is simple.
-   * It calls the `Redeem` action to claim the payout.
-   * @param gammaController is the address of the opyn controller contract
-   * @param oldOption is the address of the old option
-   * @param asset is the address of the vault's asset
-   * @return amount of asset received by exercising the option
-   */
-  function settleLong(
-    address gammaController,
-    address oldOption,
-    address asset
-  ) external returns (uint) {}
-
-  /**
    * @notice Calculates the performance and management fee for this week's round
    * @param vaultState is the struct with vault accounting state
    * @param currentLockedBalance is the amount of funds currently locked in opyn
@@ -140,40 +126,6 @@ library VaultLifecycle {
     }
 
     return (_performanceFeeInAsset, _managementFeeInAsset, _vaultFee);
-  }
-
-  /**
-   * @notice Verify the constructor params satisfy requirements
-   * @param owner is the owner of the vault with critical permissions
-   * @param feeRecipient is the address to recieve vault performance and management fees
-   * @param performanceFee is the perfomance fee pct.
-   * @param tokenName is the name of the token
-   * @param tokenSymbol is the symbol of the token
-   * @param _vaultParams is the struct with vault general data
-   */
-  function verifyInitializerParams(
-    address owner,
-    address keeper,
-    address feeRecipient,
-    uint performanceFee,
-    uint managementFee,
-    string calldata tokenName,
-    string calldata tokenSymbol,
-    Vault.VaultParams calldata _vaultParams
-  ) external pure {
-    require(owner != address(0), "!owner");
-    require(keeper != address(0), "!keeper");
-    require(feeRecipient != address(0), "!feeRecipient");
-    require(performanceFee < 100 * Vault.FEE_MULTIPLIER, "performanceFee >= 100%");
-    require(managementFee < 100 * Vault.FEE_MULTIPLIER, "managementFee >= 100%");
-    require(bytes(tokenName).length > 0, "!tokenName");
-    require(bytes(tokenSymbol).length > 0, "!tokenSymbol");
-
-    require(_vaultParams.asset != address(0), "!asset");
-    require(_vaultParams.underlying != address(0), "!underlying");
-    require(_vaultParams.minimumSupply > 0, "!minimumSupply");
-    require(_vaultParams.cap > 0, "!cap");
-    require(_vaultParams.cap > _vaultParams.minimumSupply, "cap has to be higher than minimumSupply");
   }
 
   /**

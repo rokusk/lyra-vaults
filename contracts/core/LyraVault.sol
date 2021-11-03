@@ -1,26 +1,36 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.7.0;
+pragma abicoder v2;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+import {BaseVault} from "./BaseVault.sol";
 import {IVaultStrategy} from "../interfaces/IVaultStrategy.sol";
 import {IOptionMarket} from "../interfaces/IOptionMarket.sol";
+import {Vault} from "../libraries/Vault.sol";
 
 /// @notice LyraVault help users run option-selling strategies on Lyra AMM.
-contract LyraVault is Ownable {
-  IERC20 public immutable asset;
+contract LyraVault is Ownable, BaseVault {
   IOptionMarket public immutable optionMarket;
 
   IVaultStrategy public strategy;
 
   event StrategyUpdated(address strategy);
 
-  constructor(address _asset, address _optionMarket) {
-    asset = IERC20(_asset);
+  constructor(
+    address _optionMarket, 
+    address _weth,
+    address _feeRecipient,
+    uint _managementFee,
+    uint _performanceFee,
+    string memory _tokenName,
+    string memory _tokenSymbol,
+    Vault.VaultParams memory _vaultParams
+  ) BaseVault(_weth, _feeRecipient, _managementFee, _performanceFee, _tokenName, _tokenSymbol, _vaultParams) {
     optionMarket = IOptionMarket(_optionMarket);
 
-    IERC20(_asset).approve(_optionMarket, uint(-1));
+    IERC20(_vaultParams.asset).approve(_optionMarket, uint(-1));
   }
 
   /// @dev set strategy contract. This function can only be called by owner.
@@ -42,10 +52,5 @@ contract LyraVault is Ownable {
     // todo: exchange sUSD => sETH
 
     require(strategy.checkPostTrade(), "bad trade");
-  }
-
-  /// @dev settle short positions
-  function settle() external {
-    // todo
   }
 }

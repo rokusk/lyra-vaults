@@ -40,8 +40,28 @@ describe('Vault', async () => {
   describe('deploy', async () => {
     it('should successfully deploy and set immutable addresses', async () => {
       const LyraVault = await ethers.getContractFactory('LyraVault');
-      vault = (await LyraVault.deploy(weth.address, mockedMarket.address)) as LyraVault;
-      expect(await vault.asset()).to.be.eq(weth.address);
+      
+      const cap = ethers.utils.parseEther('5000');
+      const decimals = 18
+      
+      vault = (await LyraVault.deploy(
+        mockedMarket.address,
+        weth.address,
+        owner.address, // feeRecipient,
+        0, // management fee
+        0, // performanceFee
+        "LyraVault Share",
+        "Lyra VS",
+        {
+          decimals,
+          cap,
+          asset: weth.address
+        }
+      )) as LyraVault;
+      const params = await vault.vaultParams();
+      expect(params.asset).to.be.eq(weth.address);
+      expect(params.cap).to.be.eq(cap);
+      expect(params.decimals).to.be.eq(decimals);
       expect(await vault.optionMarket()).to.be.eq(mockedMarket.address);
     });
   });

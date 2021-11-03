@@ -22,18 +22,12 @@ library Vault {
   uint internal constant PLACEHOLDER_UINT = 1;
 
   struct VaultParams {
-    // Option type the vault is selling
-    bool isPut;
     // Token decimals for vault shares
     uint8 decimals;
-    // Asset used in Theta / Delta Vault
-    address asset;
-    // Underlying asset of the options sold by vault
-    address underlying;
-    // Minimum supply of the vault shares issued, for ETH it's 10**10
-    uint56 minimumSupply;
     // Vault cap
     uint104 cap;
+    // Asset used in Theta / Delta Vault
+    address asset;
   }
 
   struct OptionState {

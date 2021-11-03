@@ -68,9 +68,6 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
   /// @notice WETH contract address
   address public immutable WETH;
 
-  /// @notice sUSD contract address
-  address public immutable sUSD;
-
   /// @notice 15 minute timelock between commitAndClose and rollToNexOption.
   uint public constant DELAY = 15 minutes;
 
@@ -108,11 +105,9 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
   /**
    * @notice Initializes the contract with immutable variables
    * @param _weth is the Wrapped Ether contract
-   * @param _susd is the sUSD contract
    */
   constructor(
     address _weth,
-    address _susd,
     address _feeRecipient,
     uint _managementFee,
     uint _performanceFee,
@@ -121,10 +116,8 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
     Vault.VaultParams memory _vaultParams
   ) ERC20(_tokenName, _tokenSymbol) {
     require(_weth != address(0), "!_weth");
-    require(_susd != address(0), "!_susd");
 
     WETH = _weth;
-    sUSD = _susd;
 
     feeRecipient = _feeRecipient;
     performanceFee = _performanceFee;
@@ -240,7 +233,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
     uint totalWithDepositedAmount = totalBalance().add(amount);
 
     require(totalWithDepositedAmount <= vaultParams.cap, "Exceed cap");
-    require(totalWithDepositedAmount >= vaultParams.minimumSupply, "Insufficient balance");
+    // require(totalWithDepositedAmount >= vaultParams.minimumSupply, "Insufficient balance");
 
     emit Deposit(creditor, amount, currentRound);
 
@@ -600,8 +593,4 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
   function totalPending() external view returns (uint) {
     return vaultState.totalPending;
   }
-
-  /************************************************
-   *  HELPERS
-   ***********************************************/
 }
