@@ -18,16 +18,16 @@ library VaultLifecycle {
   using SafeERC20 for IERC20;
 
   /**
-     * @notice Calculate the shares to mint, new price per share, and amount of funds to re-allocate as collateral for the new round
-     * @param currentShareSupply is the total supply of shares
-     * @param asset is the address of the vault's asset
-     * @param decimals is the decimals of the asset
-     * @param pendingAmount is the amount of funds pending from recent deposits
-     * @return newLockedAmount is the amount of funds to allocate for the new round
-     * @return queuedWithdrawAmount is the amount of funds set aside for withdrawal
-     * @return newPricePerShare is the price per share of the new round
-     * @return mintShares is the amount of shares to mint from deposits
-     */
+   * @notice Calculate the shares to mint, new price per share, and amount of funds to re-allocate as collateral for the new round
+   * @param currentShareSupply is the total supply of shares
+   * @param asset is the address of the vault's asset
+   * @param decimals is the decimals of the asset
+   * @param pendingAmount is the amount of funds pending from recent deposits
+   * @return newLockedAmount is the amount of funds to allocate for the new round
+   * @return queuedWithdrawAmount is the amount of funds set aside for withdrawal
+   * @return newPricePerShare is the price per share of the new round
+   * @return mintShares is the amount of shares to mint from deposits
+   */
   function rollover(
     uint currentShareSupply,
     address asset,

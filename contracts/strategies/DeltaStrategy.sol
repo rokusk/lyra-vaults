@@ -91,7 +91,10 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
    * param size size of trade
    * @return minPremium the min amount of sUSD the vault should receive
    */
-  function _getMinPremium(uint /*listingId*/, uint /*size*/) internal pure returns (uint minPremium) {
+  function _getMinPremium(
+    uint, /*listingId*/
+    uint /*size*/
+  ) internal pure returns (uint minPremium) {
     // todo: request blacksholes to get premium without fee
     // todo: apply constant logic to get min premium
     minPremium = 0;

@@ -70,7 +70,7 @@ contract LyraVault is Ownable, BaseVault {
   /// @notice roll to next round
   function rollToNextRound() external {
     vaultState.lastLockedAmount = uint104(balanceBeforePremium);
-    
+
     // todo: cannot roll over anytime. This should be done after settlement
 
     (uint lockedBalance, uint queuedWithdrawAmount) = _rollToNextRound(uint(lastQueuedWithdrawAmount));

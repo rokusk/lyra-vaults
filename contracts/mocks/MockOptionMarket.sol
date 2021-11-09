@@ -37,7 +37,10 @@ contract MockOptionMarket {
     return premium;
   }
 
-  function settleOptions(uint /*listingId*/, IOptionMarket.TradeType /*tradeType*/) external {
+  function settleOptions(
+    uint, /*listingId*/
+    IOptionMarket.TradeType /*tradeType*/
+  ) external {
     IERC20(collateralToken).transfer(msg.sender, settlementPayout);
   }
 }

@@ -334,7 +334,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
     _burn(address(this), withdrawalShares);
 
     require(withdrawAmount > 0, "!withdrawAmount");
-    
+
     _transferAsset(msg.sender, withdrawAmount);
   }
 
