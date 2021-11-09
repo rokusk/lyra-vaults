@@ -2,9 +2,9 @@ import { parseEther, parseUnits } from '@ethersproject/units';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { LyraVault, MockOptionMarket, MockStrategy, MockERC20, WETH9 } from '../../typechain';
+import { LyraVault, MockOptionMarket, MockStrategy, MockERC20, WETH9 } from '../../../typechain';
 
-describe('Vault', async () => {
+describe('Unit test: Basic LyraVault flow', async () => {
   // contract instances
   let vault: LyraVault;
 
@@ -70,6 +70,9 @@ describe('Vault', async () => {
       expect(params.cap).to.be.eq(cap);
       expect(params.decimals).to.be.eq(decimals);
       expect(await vault.optionMarket()).to.be.eq(mockedMarket.address);
+
+      // view functions
+      expect(await vault.decimals()).to.be.eq(decimals);
     });
   });
 
@@ -87,20 +90,21 @@ describe('Vault', async () => {
   });
 
   describe('basic deposit', async() => {
-    it('should deposit eth into the contract and update the receipt', async() => {
-      const initState = await vault.vaultState();
+    it('should deposit eth into the contract', async() => {
+      
       const initReceipt = await vault.depositReceipts(depositor.address);
       
-      await weth.connect(depositor).deposit({value: depositAmount})
-      await weth.connect(depositor).approve(vault.address, ethers.constants.MaxUint256)
-      await vault.connect(depositor).deposit(depositAmount)
+      await vault.connect(depositor).depositETH({value: depositAmount})
 
-      const newState = await vault.vaultState();
       const newReceipt = await vault.depositReceipts(depositor.address);
+      const balances = await vault.shareBalances(depositor.address)
 
-      expect(newState.totalPending.sub(initState.totalPending)).to.be.eq(depositAmount)
       expect(newReceipt.amount.sub(initReceipt.amount)).to.be.eq(depositAmount)
       expect(newReceipt.unredeemedShares.sub(initReceipt.unredeemedShares)).to.be.eq(0)
+
+      expect(balances.heldByAccount).to.be.eq(0)
+      // share are not minted yet, so heldByVault is also 0
+      expect(balances.heldByVault).to.be.eq(0)
     })
   })
 

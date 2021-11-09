@@ -401,17 +401,17 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    *         Having 1 initialized beforehand will not be an issue as long as we round down share calculations to 0.
    * @param numRounds is the number of rounds to initialize in the map
    */
-  function initRounds(uint numRounds) external nonReentrant {
-    require(numRounds > 0, "!numRounds");
+  // function initRounds(uint numRounds) external nonReentrant {
+  //   require(numRounds > 0, "!numRounds");
 
-    uint _round = vaultState.round;
-    for (uint i = 0; i < numRounds; i++) {
-      uint index = _round + i;
-      require(index >= _round, "Overflow");
-      require(roundPricePerShare[index] == 0, "Initialized"); // AVOID OVERWRITING ACTUAL VALUES
-      roundPricePerShare[index] = ShareMath.PLACEHOLDER_UINT;
-    }
-  }
+  //   uint _round = vaultState.round;
+  //   for (uint i = 0; i < numRounds; i++) {
+  //     uint index = _round + i;
+  //     require(index >= _round, "Overflow");
+  //     require(roundPricePerShare[index] == 0, "Initialized"); // AVOID OVERWRITING ACTUAL VALUES
+  //     roundPricePerShare[index] = ShareMath.PLACEHOLDER_UINT;
+  //   }
+  // }
 
   /*
    * @notice Helper function that performs most administrative tasks
@@ -553,13 +553,5 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    */
   function decimals() public view override returns (uint8) {
     return vaultParams.decimals;
-  }
-
-  function cap() external view returns (uint) {
-    return vaultParams.cap;
-  }
-
-  function totalPending() external view returns (uint) {
-    return vaultState.totalPending;
   }
 }
