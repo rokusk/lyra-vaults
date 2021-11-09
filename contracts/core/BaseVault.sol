@@ -143,6 +143,8 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
   function setManagementFee(uint newManagementFee) external onlyOwner {
     require(newManagementFee < 100 * Vault.FEE_MULTIPLIER, "Invalid management fee");
 
+    emit ManagementFeeSet(managementFee, newManagementFee);
+
     // We are dividing annualized management fee by num weeks in a year
     managementFee = newManagementFee.mul(Vault.FEE_MULTIPLIER).div(WEEKS_PER_YEAR);
   }
@@ -165,6 +167,9 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    */
   function setCap(uint newCap) external onlyOwner {
     require(newCap > 0, "!newCap");
+
+    emit CapSet(vaultParams.cap, newCap, msg.sender);
+
     ShareMath.assertUint104(newCap);
     vaultParams.cap = uint104(newCap);
   }
@@ -206,7 +211,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    */
   function depositFor(uint amount, address creditor) external nonReentrant {
     require(amount > 0, "!amount");
-    require(creditor != address(0));
+    require(creditor != address(0), "!creditor");
 
     _depositFor(amount, creditor);
 
@@ -224,13 +229,12 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
     uint totalWithDepositedAmount = totalBalance().add(amount);
 
     require(totalWithDepositedAmount <= vaultParams.cap, "Exceed cap");
-    // require(totalWithDepositedAmount >= vaultParams.minimumSupply, "Insufficient balance");
 
     emit Deposit(creditor, amount, currentRound);
 
     Vault.DepositReceipt memory depositReceipt = depositReceipts[creditor];
 
-    // If we have an unprocessed pending deposit from the previous rounds, we have to process it.
+    // process unprocessed pending deposit from the previous rounds
     uint unredeemedShares = depositReceipt.getSharesFromReceipt(
       currentRound,
       roundPricePerShare[depositReceipt.round],
@@ -330,7 +334,8 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
     _burn(address(this), withdrawalShares);
 
     require(withdrawAmount > 0, "!withdrawAmount");
-    transferAsset(msg.sender, withdrawAmount);
+    
+    _transferAsset(msg.sender, withdrawAmount);
   }
 
   /**
@@ -435,6 +440,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
     // Take management / performance fee from previous round and deduct
     lockedBalance = lockedBalance.sub(_collectVaultFees(lockedBalance.add(withdrawAmountDiff)));
 
+    // update round info
     vaultState.totalPending = 0;
     vaultState.round = uint16(currentRound + 1);
 
@@ -457,7 +463,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
     );
 
     if (vaultFee > 0) {
-      transferAsset(payable(feeRecipient), vaultFee);
+      _transferAsset(payable(feeRecipient), vaultFee);
       emit CollectVaultFees(performanceFeeInAsset, vaultFee, vaultState.round, feeRecipient);
     }
 
@@ -469,7 +475,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    * @param recipient is the receiving address
    * @param amount is the transfer amount
    */
-  function transferAsset(address recipient, uint amount) internal {
+  function _transferAsset(address recipient, uint amount) internal {
     address asset = vaultParams.asset;
     if (asset == WETH) {
       IWETH(WETH).withdraw(amount);

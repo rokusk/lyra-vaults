@@ -57,11 +57,22 @@ contract LyraVault is Ownable, BaseVault {
     require(realPremium >= minPremium, "premium too low");
 
     // todo: exchange sUSD => sETH
-
     require(strategy.checkPostTrade(), "bad trade");
   }
 
+  /// @notice settle outstanding short positions.
+  /// @dev anyone can call the function to settle outstanding expired positions
+  function settle(uint listingId) external {
+    // eth call options are settled in eth
+    optionMarket.settleOptions(listingId, IOptionMarket.TradeType.SHORT_CALL);
+  }
+
+  /// @notice roll to next round
   function rollToNextRound() external {
+    vaultState.lastLockedAmount = uint104(balanceBeforePremium);
+    
+    // todo: cannot roll over anytime. This should be done after settlement
+
     (uint lockedBalance, uint queuedWithdrawAmount) = _rollToNextRound(uint(lastQueuedWithdrawAmount));
 
     lastQueuedWithdrawAmount = uint128(queuedWithdrawAmount);

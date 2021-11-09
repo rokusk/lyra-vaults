@@ -1,8 +1,8 @@
-import { parseUnits } from '@ethersproject/units';
+import { parseEther, parseUnits } from '@ethersproject/units';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { LyraVault, MockOptionMarket, MockStrategy, MockERC20 } from '../../typechain';
+import { LyraVault, MockOptionMarket, MockStrategy, MockERC20, WETH9 } from '../../typechain';
 
 describe('Vault', async () => {
   // contract instances
@@ -12,17 +12,22 @@ describe('Vault', async () => {
   let mockedStrategy: MockStrategy;
   let mockedMarket: MockOptionMarket;
   
-  let weth: MockERC20
+  let weth: WETH9
   let susd: MockERC20
 
   // signers
-  let random: SignerWithAddress;
+  let anyone: SignerWithAddress;
   let owner: SignerWithAddress;
+  let depositor: SignerWithAddress
+
+  // fix deposit amount at 1 eth
+  const depositAmount = parseEther('1')
 
   before('prepare signers', async () => {
     const addresses = await ethers.getSigners();
     owner = addresses[0];
-    random = addresses[1];
+    anyone = addresses[1];
+    depositor = addresses[2]
   });
 
   before('prepare mocked contracts', async () => {
@@ -33,8 +38,10 @@ describe('Vault', async () => {
     mockedStrategy = (await MockStrategyFactory.deploy()) as MockStrategy;
 
     const MockERC20Factory = await ethers.getContractFactory('MockERC20');
-    weth = (await MockERC20Factory.deploy('Wrapped ETH', 'WETH', 18)) as MockERC20;
     susd = (await MockERC20Factory.deploy('Synth USD', 'sUSD', 18)) as MockERC20;
+
+    const WETH9Factory = await ethers.getContractFactory("WETH9");
+    weth = (await WETH9Factory.deploy()) as WETH9;
   });
 
   describe('deploy', async () => {
@@ -68,7 +75,7 @@ describe('Vault', async () => {
 
   describe('set strategy', async () => {
     it('should revert if called by non-owner', async () => {
-      await expect(vault.connect(random).setStrategy(ethers.constants.AddressZero)).to.be.revertedWith(
+      await expect(vault.connect(anyone).setStrategy(ethers.constants.AddressZero)).to.be.revertedWith(
         'Ownable: caller is not the owner',
       );
     });
@@ -79,6 +86,24 @@ describe('Vault', async () => {
     });
   });
 
+  describe('basic deposit', async() => {
+    it('should deposit eth into the contract and update the receipt', async() => {
+      const initState = await vault.vaultState();
+      const initReceipt = await vault.depositReceipts(depositor.address);
+      
+      await weth.connect(depositor).deposit({value: depositAmount})
+      await weth.connect(depositor).approve(vault.address, ethers.constants.MaxUint256)
+      await vault.connect(depositor).deposit(depositAmount)
+
+      const newState = await vault.vaultState();
+      const newReceipt = await vault.depositReceipts(depositor.address);
+
+      expect(newState.totalPending.sub(initState.totalPending)).to.be.eq(depositAmount)
+      expect(newReceipt.amount.sub(initReceipt.amount)).to.be.eq(depositAmount)
+      expect(newReceipt.unredeemedShares.sub(initReceipt.unredeemedShares)).to.be.eq(0)
+    })
+  })
+
   describe('trade flow tests', async () => {
     const size = parseUnits('1')
     const collateralAmount = parseUnits('1')
@@ -86,10 +111,6 @@ describe('Vault', async () => {
     // mock premium to 50 USD
     const minPremium = parseUnits('50')
 
-    before('mint weth for vault', async() => {
-      //todo: change this to deposit
-      await weth.mint(vault.address, parseUnits('50'))
-    });
     before('mint asset for option market', async() => {
       await susd.mint(mockedMarket.address, parseUnits('100000'))
     })
@@ -126,4 +147,41 @@ describe('Vault', async () => {
     })
 
   });
-});
+
+  describe('settle trade', async() => {
+    const settlementPayout = parseEther('1')
+    before('set mock settle data', async() => {
+      await mockedMarket.setMockSettlement(settlementPayout)
+
+      // send weth to mock mark
+      await weth.connect(anyone).deposit({value: settlementPayout})
+      await weth.connect(anyone).transfer(mockedMarket.address, settlementPayout)
+    })
+    it('should settle a specific listing and get back collateral (weth)', async() => {
+      const vaultBalanceBefore = await weth.balanceOf(vault.address)
+      const listingId = 0
+      await vault.settle(listingId)
+      const vaultBalanceAfter = await weth.balanceOf(vault.address)
+      expect(vaultBalanceAfter.sub(vaultBalanceBefore)).to.be.eq(settlementPayout)
+    })
+  })
+
+  describe('rollover', async() => {
+    it('should revert if a round is not passed', async() => {
+      //todo: add restriction on rollover
+    })
+    before('simulate time pass', async() => {
+      await ethers.provider.send("evm_increaseTime", [86400*7])
+      await ethers.provider.send("evm_mine", [])
+    })
+    it('should rollover the vault to the next round', async() => {
+      const vaultStateBefore = await vault.vaultState()
+      
+      await vault.rollToNextRound()
+
+      const vaultStateAfter = await vault.vaultState()
+
+      expect(vaultStateBefore.round + 1).to.be.eq(vaultStateAfter.round)
+    })
+  })
+}); 

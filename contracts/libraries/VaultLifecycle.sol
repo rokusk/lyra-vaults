@@ -18,8 +18,7 @@ library VaultLifecycle {
   using SafeERC20 for IERC20;
 
   /**
-     * @notice Calculate the shares to mint, new price per share, and
-      amount of funds to re-allocate as collateral for the new round
+     * @notice Calculate the shares to mint, new price per share, and amount of funds to re-allocate as collateral for the new round
      * @param currentShareSupply is the total supply of shares
      * @param asset is the address of the vault's asset
      * @param decimals is the decimals of the asset
@@ -60,16 +59,6 @@ library VaultLifecycle {
 
     return (currentBalance.sub(queuedWithdraw), queuedWithdraw, newPricePerShare, _mintShares);
   }
-
-  /**
-     * @notice Close the existing short otoken position. Currently this implementation is simple.
-     * It closes the most recent vault opened by the contract. This assumes that the contract will
-     * only have a single vault open at any given time. Since calling `_closeShort` deletes vaults by
-     calling SettleVault action, this assumption should hold.
-     * @param gammaController is the address of the opyn controller contract
-     * @return amount of collateral redeemed from the vault
-     */
-  function settleShort(address gammaController) internal returns (uint) {}
 
   /**
    * @notice Calculates the performance and management fee for this week's round
@@ -120,27 +109,5 @@ library VaultLifecycle {
     }
 
     return (_performanceFeeInAsset, _managementFeeInAsset, _vaultFee);
-  }
-
-  /**
-   * @notice Gets the next options expiry timestamp
-   * @param currentExpiry is the expiry timestamp of the current option
-   * Reference: https://codereview.stackexchange.com/a/33532
-   * Examples:
-   * getNextFriday(week 1 thursday) -> week 1 friday
-   * getNextFriday(week 1 friday) -> week 2 friday
-   * getNextFriday(week 1 saturday) -> week 2 friday
-   */
-  function getNextFriday(uint currentExpiry) internal pure returns (uint) {
-    // dayOfWeek = 0 (sunday) - 6 (saturday)
-    uint dayOfWeek = ((currentExpiry / 1 days) + 4) % 7;
-    uint nextFriday = currentExpiry + ((7 + 5 - dayOfWeek) % 7) * 1 days;
-    uint friday8am = nextFriday - (nextFriday % (24 hours)) + (8 hours);
-
-    // If the passed currentExpiry is day=Friday hour>8am, we simply increment it by a week to next Friday
-    if (currentExpiry >= friday8am) {
-      friday8am += 7 days;
-    }
-    return friday8am;
   }
 }
