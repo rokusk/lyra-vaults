@@ -37,8 +37,6 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
     const MockStrategyFactory = await ethers.getContractFactory('MockStrategy');
     mockedStrategy = (await MockStrategyFactory.deploy()) as MockStrategy;
 
-    const MockERC20Factory = await ethers.getContractFactory('MockERC20');
-
     const WETH9Factory = await ethers.getContractFactory("WETH9");
     weth = (await WETH9Factory.deploy()) as WETH9;
   });
@@ -125,6 +123,10 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
     it('should revert when using initiateWithdraw becuase user has no shares', async() => {
       const sharesToWithdraw = depositAmount
       await expect(vault.connect(depositor).initiateWithdraw(sharesToWithdraw)).to.be.revertedWith('ERC20: transfer amount exceeds balance')
+    })
+
+    it('should revert when calling competeWithdraw becuase user has no pending withdraw', async() => {
+      await expect(vault.connect(depositor).completeWithdraw()).to.be.revertedWith('Not initiated')
     })
 
     it('should revert when calling redeem becuase depositor has no unreedemed shares', async() => {

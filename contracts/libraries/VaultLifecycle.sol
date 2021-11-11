@@ -18,7 +18,8 @@ library VaultLifecycle {
   using SafeERC20 for IERC20;
 
   /**
-   * @notice Calculate the shares to mint, new price per share, and amount of funds to re-allocate as collateral for the new round
+   * @notice Calculate the shares to mint, new price per share,
+   *         and amount of funds to re-allocate as collateral for the new round
    * @param currentShareSupply is the total supply of shares
    * @param asset is the address of the vault's asset
    * @param decimals is the decimals of the asset
