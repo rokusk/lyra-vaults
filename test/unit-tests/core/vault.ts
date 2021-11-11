@@ -3,6 +3,8 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { LyraVault, MockOptionMarket, MockStrategy, MockERC20, WETH9 } from '../../../typechain';
+import { FEE_MULTIPLIER, WEEKS_PER_YEAR } from '../utils/constants';
+import { BigNumber } from 'ethers'
 
 describe('Unit test: Basic LyraVault flow', async () => {
   // contract instances
@@ -19,15 +21,21 @@ describe('Unit test: Basic LyraVault flow', async () => {
   let anyone: SignerWithAddress;
   let owner: SignerWithAddress;
   let depositor: SignerWithAddress
+  let feeRecipient: SignerWithAddress
 
   // fix deposit amount at 1 eth
   const depositAmount = parseEther('1')
+
+  const performanceFee = 2 * FEE_MULTIPLIER // 2% fee
+  const managementFee = 1 * FEE_MULTIPLIER // 1% fee
+  const initCap = parseEther('50')
 
   before('prepare signers', async () => {
     const addresses = await ethers.getSigners();
     owner = addresses[0];
     anyone = addresses[1];
     depositor = addresses[2]
+    feeRecipient = addresses[3]
   });
 
   before('prepare mocked contracts', async () => {
@@ -55,8 +63,8 @@ describe('Unit test: Basic LyraVault flow', async () => {
         mockedMarket.address,
         weth.address,
         owner.address, // feeRecipient,
-        0, // management fee
-        0, // performanceFee
+        0, // set management fee as 0 first
+        0, // set performance Fee as 0 first
         "LyraVault Share",
         "Lyra VS",
         {
@@ -67,7 +75,7 @@ describe('Unit test: Basic LyraVault flow', async () => {
       )) as LyraVault;
       const params = await vault.vaultParams();
       expect(params.asset).to.be.eq(weth.address);
-      expect(params.cap).to.be.eq(cap);
+      
       expect(params.decimals).to.be.eq(decimals);
       expect(await vault.optionMarket()).to.be.eq(mockedMarket.address);
 
@@ -75,6 +83,40 @@ describe('Unit test: Basic LyraVault flow', async () => {
       expect(await vault.decimals()).to.be.eq(decimals);
     });
   });
+
+  describe('owner settings', async() => {
+    it('owner should be able to set a new cap', async() => {
+      await vault.connect(owner).setCap(initCap)
+      
+      const params = await vault.vaultParams()
+      expect(params.cap).to.be.eq(initCap);
+    })
+    it('owner should be able to set a new management fee', async() => {
+      await vault.connect(owner).setManagementFee(managementFee)
+
+      const fee = await vault.managementFee()
+      const weeklyFee = BigNumber.from(managementFee).mul(FEE_MULTIPLIER).div(WEEKS_PER_YEAR)
+      expect(weeklyFee).to.be.eq(fee);
+    })
+    it('should revert when trying to set a mangement fee that\'s too high', async() => {
+      await expect(vault.connect(owner).setManagementFee(100*FEE_MULTIPLIER)).to.be.revertedWith('Invalid management fee')
+    })
+    it('owner should be able to set a new performance fee', async() => {
+      await vault.connect(owner).setPerformanceFee(performanceFee)
+
+      const fee = await vault.performanceFee()
+      expect(fee).to.be.eq(performanceFee);
+      
+    })
+    it('should revert when trying to set a performance fee that\'s too high', async() => {
+      await expect(vault.connect(owner).setPerformanceFee(100*FEE_MULTIPLIER)).to.be.revertedWith('Invalid performance fee')
+    })
+    it('owner should be able to set a new fee recipient address', async() => {
+      await vault.connect(owner).setFeeRecipient(feeRecipient.address)
+      const recipient = await vault.feeRecipient()
+      expect(recipient).to.be.eq(feeRecipient.address);
+    })
+  })
 
   describe('set strategy', async () => {
     it('should revert if called by non-owner', async () => {
@@ -97,14 +139,9 @@ describe('Unit test: Basic LyraVault flow', async () => {
       await vault.connect(depositor).depositETH({value: depositAmount})
 
       const newReceipt = await vault.depositReceipts(depositor.address);
-      const balances = await vault.shareBalances(depositor.address)
 
       expect(newReceipt.amount.sub(initReceipt.amount)).to.be.eq(depositAmount)
-      expect(newReceipt.unredeemedShares.sub(initReceipt.unredeemedShares)).to.be.eq(0)
-
-      expect(balances.heldByAccount).to.be.eq(0)
-      // share are not minted yet, so heldByVault is also 0
-      expect(balances.heldByVault).to.be.eq(0)
+      expect(newReceipt.unredeemedShares.sub(initReceipt.unredeemedShares)).to.be.eq(0)      
     })
   })
 

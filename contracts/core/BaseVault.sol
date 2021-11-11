@@ -63,7 +63,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    ***********************************************/
 
   /// @notice WETH contract address
-  address public immutable WETH;
+  address public immutable WETH; // solhint-disable var-name-mixedcase
 
   // Number of weeks per year = 52.142857 weeks * FEE_MULTIPLIER = 52142857
   // Dividing by weeks per year requires doing num.mul(FEE_MULTIPLIER).div(WEEKS_PER_YEAR)
@@ -479,7 +479,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
     address asset = vaultParams.asset;
     if (asset == WETH) {
       IWETH(WETH).withdraw(amount);
-      (bool success, ) = recipient.call{value: amount}("");
+      (bool success, ) = recipient.call{value: amount}(""); // solhint-disable avoid-low-level-calls
       require(success, "Transfer failed");
       return;
     }

@@ -138,6 +138,25 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
       const sharesAfter = await vault.balanceOf(depositor.address)
       expect(sharesAfter).to.be.eq(sharesBefore)
     })
+
+    // test share calculations during vault 1.
+    it('should return 0 for shares before round ends', async() => {
+      const balances = await vault.shareBalances(depositor.address)
+      expect(balances.heldByVault).to.be.eq(0)
+      expect(balances.heldByAccount).to.be.eq(0)
+
+      const shares = await vault.shares(depositor.address)
+      expect(shares).to.be.eq(0)
+    })
+    it('should return constant for price per share before first share is minted', async() => {
+      const oneShare = parseEther('1')
+      const price = await vault.pricePerShare()
+      expect(price).to.be.eq(oneShare)
+    })
+    it('shuold return 0 for total balance ', async() => {
+      const balance = await vault.accountVaultBalance(depositor.address)
+      expect(balance).to.be.eq(0)
+    })
   })
 
   describe('rollover', async() => {
