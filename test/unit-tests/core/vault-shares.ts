@@ -1,9 +1,10 @@
 
-import { parseEther } from '@ethersproject/units';
+import { parseEther, parseUnits } from '@ethersproject/units';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { LyraVault, MockOptionMarket, MockStrategy, WETH9 } from '../../../typechain';
+import { LyraVault, MockERC20, MockOptionMarket, MockStrategy, MockSynthetix, WETH9 } from '../../../typechain';
+import { toBytes32 } from '../utils/synthetixUtils';
 
 describe('Unit test: share calculating for pending deposit and withdraw', async () => {
   // contract instances
@@ -12,8 +13,10 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
   // mocked contracts
   let mockedStrategy: MockStrategy;
   let mockedMarket: MockOptionMarket;
+  let mockedSynthetix: MockSynthetix
   
   let weth: WETH9
+  let susd: MockERC20
 
   // signers
   let anyone: SignerWithAddress;
@@ -22,6 +25,11 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
 
   // fix deposit amount at 1 eth
   const depositAmount = parseEther('1')
+
+
+  // mocked key for synthetix
+  const susdKey = toBytes32('sUSD');
+  const wethKey = toBytes32('wETH');
 
   before('prepare signers', async () => {
     const addresses = await ethers.getSigners();
@@ -37,8 +45,15 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
     const MockStrategyFactory = await ethers.getContractFactory('MockStrategy');
     mockedStrategy = (await MockStrategyFactory.deploy()) as MockStrategy;
 
+    const MockSynthetixFactory = await ethers.getContractFactory('MockSynthetix');
+    mockedSynthetix = (await MockSynthetixFactory.deploy()) as MockSynthetix;
+
+
     const WETH9Factory = await ethers.getContractFactory("WETH9");
     weth = (await WETH9Factory.deploy()) as WETH9;
+
+    const MockERC20Factory = await ethers.getContractFactory("MockERC20");
+    susd = (await MockERC20Factory.deploy('Synth USD', 'sUSD', 18)) as MockERC20;
   });
 
   before('setup LyraVault instance, link to a mocked strategy', async() => {
@@ -50,20 +65,34 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
     vault = (await LyraVaultFactory.deploy(
       mockedMarket.address,
       weth.address,
+      susd.address,
       owner.address, // feeRecipient,
-      0, // management fee
-      0, // performanceFee
+      mockedSynthetix.address,
       "LyraVault Share",
       "Lyra VS",
       {
         decimals,
         cap,
         asset: weth.address
-      }
+      },
+      susdKey,
+      wethKey,
     )) as LyraVault;
 
     // set strategy
     await vault.connect(owner).setStrategy(mockedStrategy.address);
+  })
+
+  before('mint asset for option market and synthetix', async() => {
+    await susd.mint(mockedMarket.address, parseUnits('100000'))
+
+    await weth.connect(anyone).deposit({value: parseEther('100')})
+    await weth.connect(anyone).transfer(mockedSynthetix.address, parseEther('100'))
+  })
+
+  before('setup mocked synthetix', async() => {
+    await mockedSynthetix.setMockedKeyToAddress(susdKey, susd.address)
+    await mockedSynthetix.setMockedKeyToAddress(wethKey, weth.address)
   })
 
   describe('basic deposit and withdraw in round 1.', async() => {
@@ -141,7 +170,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
       expect(sharesAfter).to.be.eq(sharesBefore)
     })
 
-    // test share calculations during vault 1.
+    // test share calculations during round 1.
     it('should return 0 for shares before round ends', async() => {
       const balances = await vault.shareBalances(depositor.address)
       expect(balances.heldByVault).to.be.eq(0)
@@ -161,7 +190,39 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
     })
   })
 
-  describe('rollover', async() => {
+  describe('stimulate trade', async () => {
+    const size = parseUnits('1')
+    const collateralAmount = parseUnits('1')
+    // mock premium to 50 USD
+    const minPremium = parseUnits('50')
+
+    const premiumInWeth = parseEther('0.01')
+
+    before('set mocked response from strategy', async() => {
+      // set request and check result
+      await mockedStrategy.setMockedTradeRequest(0, size, minPremium)
+      await mockedStrategy.setMockedPostCheck(true)
+    })
+
+    before('set mocked premium', async() => {
+      await mockedMarket.setMockCollateral(weth.address, collateralAmount)
+      await mockedMarket.setMockPremium(susd.address, minPremium)
+    })
+
+    before('set mocked synthetix return', async() => {
+      await mockedSynthetix.setMockedTradeAmount(weth.address, premiumInWeth)
+    })
+
+    it('should successfully trade with returned amount', async() => {
+      const wethBefore = await weth.balanceOf(vault.address)
+      await vault.trade()
+      const wethAfter = await weth.balanceOf(vault.address)
+      expect(wethBefore.sub(collateralAmount).add(premiumInWeth)).to.be.eq(wethAfter)
+    })
+
+  });
+
+  describe('make money, settle and rollover to the next round', async() => {
     it('should revert if a round is not passed', async() => {
       //todo: add restriction on rollover
     })

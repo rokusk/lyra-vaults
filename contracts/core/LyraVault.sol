@@ -8,11 +8,14 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BaseVault} from "./BaseVault.sol";
 import {IVaultStrategy} from "../interfaces/IVaultStrategy.sol";
 import {IOptionMarket} from "../interfaces/IOptionMarket.sol";
+import {ISynthetix} from "../interfaces/ISynthetix.sol";
 import {Vault} from "../libraries/Vault.sol";
 
 /// @notice LyraVault help users run option-selling strategies on Lyra AMM.
 contract LyraVault is Ownable, BaseVault {
   IOptionMarket public immutable optionMarket;
+
+  ISynthetix public immutable synthetix;
 
   IVaultStrategy public strategy;
 
@@ -23,21 +26,35 @@ contract LyraVault is Ownable, BaseVault {
   // Delta vault equivalent of lockedAmount
   uint public balanceBeforePremium;
 
+  /// @dev Synthetix currency key for sUSD
+  bytes32 private immutable premiumCurrencyKey;
+
+  /// @dev Synthetix currency key for WETH
+  bytes32 private immutable wethCurrencyKey;
+
   event StrategyUpdated(address strategy);
 
   constructor(
     address _optionMarket,
     address _weth,
+    address _susd,
     address _feeRecipient,
-    uint _managementFee,
-    uint _performanceFee,
+    address _synthetix,
     string memory _tokenName,
     string memory _tokenSymbol,
-    Vault.VaultParams memory _vaultParams
-  ) BaseVault(_weth, _feeRecipient, _managementFee, _performanceFee, _tokenName, _tokenSymbol, _vaultParams) {
+    Vault.VaultParams memory _vaultParams,
+    bytes32 _premiumCurrencyKey,
+    bytes32 _wethCurrencyKey
+  ) BaseVault(_weth, _feeRecipient, 0, 0, _tokenName, _tokenSymbol, _vaultParams) {
     optionMarket = IOptionMarket(_optionMarket);
-
+    synthetix = ISynthetix(_synthetix);
     IERC20(_vaultParams.asset).approve(_optionMarket, uint(-1));
+
+    premiumCurrencyKey = _premiumCurrencyKey;
+    wethCurrencyKey = _wethCurrencyKey;
+
+    // allow synthetix to trade sUSD for WETH
+    IERC20(_susd).approve(_synthetix, uint(-1));
   }
 
   /// @dev set strategy contract. This function can only be called by owner.
@@ -56,8 +73,11 @@ contract LyraVault is Ownable, BaseVault {
 
     require(realPremium >= minPremium, "premium too low");
 
-    // todo: exchange sUSD => sETH
     require(strategy.checkPostTrade(), "bad trade");
+
+    // exhcnage sUSD to WETH
+    synthetix.exchange(premiumCurrencyKey, realPremium, wethCurrencyKey);
+
   }
 
   /// @notice settle outstanding short positions.
@@ -78,4 +98,7 @@ contract LyraVault is Ownable, BaseVault {
     lastQueuedWithdrawAmount = uint128(queuedWithdrawAmount);
     balanceBeforePremium = lockedBalance;
   }
+
+  /// @dev get eth from weth
+  receive() external payable {}
 }

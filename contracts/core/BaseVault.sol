@@ -15,6 +15,8 @@ import {VaultLifecycle} from "../libraries/VaultLifecycle.sol";
 import {ShareMath} from "../libraries/ShareMath.sol";
 import {IWETH} from "../interfaces/IWETH.sol";
 
+import "hardhat/console.sol";
+
 contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
   using SafeERC20 for IERC20;
   using SafeMath for uint;
