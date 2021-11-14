@@ -343,11 +343,11 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
     })
     describe('after rollover', async() => {
       it('should be able to complete withdraw from previous rounds', async() => {
-        const ethBalanceBefore = await ethers.provider.getBalance(depositor.address)
-        await vault.connect(depositor).completeWithdraw({gasPrice: 0})
-        const ethBalanceAfter = await ethers.provider.getBalance(depositor.address)
+        const wethBalanceBefore = await weth.balanceOf(vault.address)
+        await vault.connect(depositor).completeWithdraw()
+        const wethBalanceAfter = await weth.balanceOf(vault.address)
 
-        const withdrawnAmount = ethBalanceAfter.sub(ethBalanceBefore)
+        const withdrawnAmount = wethBalanceBefore.sub(wethBalanceAfter)
         const expectedWithrawnAmount = depositAmount.add(round3PremiumInEth.div(1/initiateWithdrawSharePercentage))
         expect(expectedWithrawnAmount).to.be.eq(withdrawnAmount)
       })
