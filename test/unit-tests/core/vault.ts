@@ -171,6 +171,29 @@ describe('Unit test: Basic LyraVault flow', async () => {
     })
   })
 
+  describe('trade before first round end', async () => {
+    it('should revert because the first round is not started yet', async() => {
+      // set mocked asset only
+      await mockedMarket.setMockCollateral(weth.address, parseEther('1'))
+      await mockedMarket.setMockPremium(susd.address, 0)
+
+      await expect(vault.trade()).to.be.revertedWith('SafeMath: subtraction overflow')
+    })
+  });
+
+  describe('start the second round', async()=> {
+    it('should be able to close the previous round', async() => {
+      await vault.connect(owner).closeRound()
+    })
+    it('should be able to rollover the position', async() => {
+      const roundBefore = await vault.vaultState()
+      await vault.connect(owner).rollToNextRound()
+      const roundAfter = await vault.vaultState()
+      expect(roundBefore.round).to.be.eq(1)
+      expect(roundAfter.round).to.be.eq(2)
+    })
+  })
+
   describe('trade flow tests', async () => {
     const size = parseUnits('1')
     const collateralAmount = parseUnits('1')
@@ -235,9 +258,6 @@ describe('Unit test: Basic LyraVault flow', async () => {
   })
 
   describe('rollover', async() => {
-    it('should revert if a round is not passed', async() => {
-      //todo: add restriction on rollover
-    })
     before('simulate time pass', async() => {
       await ethers.provider.send("evm_increaseTime", [86400*7])
       await ethers.provider.send("evm_mine", [])

@@ -10,6 +10,8 @@ import {ShareMath} from "./ShareMath.sol";
 import {IERC20Detailed} from "../interfaces/IERC20Detailed.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @dev copied from Ribbon's VaultLifeCycle, changed to internal library for gas optimization
  */
@@ -87,7 +89,13 @@ library VaultLifecycle {
   {
     uint prevLockedAmount = vaultState.lastLockedAmount;
 
+    console.log("prevLockedAmount", prevLockedAmount);
+    console.log("currentLockedBalance", currentLockedBalance);
+    console.log("totalPending", vaultState.totalPending);
+
     uint lockedBalanceSansPending = currentLockedBalance.sub(vaultState.totalPending);
+    console.log("lockedBalanceSansPending", lockedBalanceSansPending);
+    
 
     uint _performanceFeeInAsset;
     uint _managementFeeInAsset;

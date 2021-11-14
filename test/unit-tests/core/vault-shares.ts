@@ -190,6 +190,28 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
     })
   })
 
+  describe('trade during first round', async () => {
+    it('should revert because the first round is not started yet', async() => {
+      // set mocked asset only
+      await mockedMarket.setMockCollateral(weth.address, parseEther('1'))
+      await mockedMarket.setMockPremium(susd.address, 0)
+      await expect(vault.trade()).to.be.revertedWith('SafeMath: subtraction overflow')
+    })
+  });
+
+  describe('start the second round', async()=> {
+    it('should be able to close the previous round', async() => {
+      await vault.connect(owner).closeRound()
+    })
+    it('should be able to rollover the position', async() => {
+      const roundBefore = await vault.vaultState()
+      await vault.connect(owner).rollToNextRound()
+      const roundAfter = await vault.vaultState()
+      expect(roundBefore.round).to.be.eq(1)
+      expect(roundAfter.round).to.be.eq(2)
+    })
+  })
+
   describe('stimulate trade', async () => {
     const size = parseUnits('1')
     const collateralAmount = parseUnits('1')
@@ -223,12 +245,15 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
   });
 
   describe('make money, settle and rollover to the next round', async() => {
-    it('should revert if a round is not passed', async() => {
-      //todo: add restriction on rollover
-    })
     before('simulate time pass', async() => {
       await ethers.provider.send("evm_increaseTime", [86400*7])
       await ethers.provider.send("evm_mine", [])
+    })
+    it('should revert if a round is not passed', async() => {
+      //todo: add restriction on rollover
+    })
+    it('should settle the previouis round', async() => {
+
     })
     it('should rollover the vault to the next round', async() => {
       const vaultStateBefore = await vault.vaultState()

@@ -4,6 +4,7 @@ pragma abicoder v2;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
 import {BaseVault} from "./BaseVault.sol";
 import {IVaultStrategy} from "../interfaces/IVaultStrategy.sol";
@@ -11,8 +12,12 @@ import {IOptionMarket} from "../interfaces/IOptionMarket.sol";
 import {ISynthetix} from "../interfaces/ISynthetix.sol";
 import {Vault} from "../libraries/Vault.sol";
 
+import "hardhat/console.sol";
+
 /// @notice LyraVault help users run option-selling strategies on Lyra AMM.
 contract LyraVault is Ownable, BaseVault {
+  using SafeMath for uint;
+
   IOptionMarket public immutable optionMarket;
 
   ISynthetix public immutable synthetix;
@@ -23,8 +28,6 @@ contract LyraVault is Ownable, BaseVault {
   uint128 public lastQueuedWithdrawAmount;
   // % of funds to be used for weekly option purchase
   uint public optionAllocation;
-  // Delta vault equivalent of lockedAmount
-  uint public balanceBeforePremium;
 
   /// @dev Synthetix currency key for sUSD
   bytes32 private immutable premiumCurrencyKey;
@@ -69,7 +72,14 @@ contract LyraVault is Ownable, BaseVault {
     (uint listingId, uint amount, uint minPremium) = strategy.requestTrade();
 
     // open a short call position on lyra and collect premium
+    uint collateralBefore = IERC20(vaultParams.asset).balanceOf(address(this));
     uint realPremium = optionMarket.openPosition(listingId, IOptionMarket.TradeType.SHORT_CALL, amount);
+    uint collateralAfter = IERC20(vaultParams.asset).balanceOf(address(this));
+
+    uint assetUsed = collateralBefore.sub(collateralAfter);
+    
+    // update the remaining locked amount
+    vaultState.lockedAmountLeft = vaultState.lockedAmountLeft.sub(assetUsed);
 
     require(realPremium >= minPremium, "premium too low");
 
@@ -87,16 +97,22 @@ contract LyraVault is Ownable, BaseVault {
     optionMarket.settleOptions(listingId, IOptionMarket.TradeType.SHORT_CALL);
   }
 
+  function closeRound() external onlyOwner {
+    vaultState.lastLockedAmount = vaultState.lockedAmount;
+    vaultState.lockedAmountLeft = 0;
+    vaultState.lockedAmount = 0;
+  }
+
   /// @notice roll to next round
   function rollToNextRound() external {
-    vaultState.lastLockedAmount = uint104(balanceBeforePremium);
 
     // todo: cannot roll over anytime. This should be done after settlement
 
     (uint lockedBalance, uint queuedWithdrawAmount) = _rollToNextRound(uint(lastQueuedWithdrawAmount));
 
+    vaultState.lockedAmount = uint104(lockedBalance);
+    vaultState.lockedAmountLeft = lockedBalance;
     lastQueuedWithdrawAmount = uint128(queuedWithdrawAmount);
-    balanceBeforePremium = lockedBalance;
   }
 
   /// @dev get eth from weth

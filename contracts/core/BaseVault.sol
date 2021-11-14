@@ -120,7 +120,6 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
     uint assetBalance = IERC20(vaultParams.asset).balanceOf(address(this));
     ShareMath.assertUint104(assetBalance);
     vaultState.lastLockedAmount = uint104(assetBalance);
-
     vaultState.round = 1;
   }
 
@@ -431,6 +430,9 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
       vaultState.queuedWithdrawShares
     );
 
+    console.log("lastQueuedWithdrawAmount", lastQueuedWithdrawAmount);
+    console.log("lockedBalance", lockedBalance);
+
     // Finalize the pricePerShare at the end of the round
     uint currentRound = vaultState.round;
     roundPricePerShare[currentRound] = newPricePerShare;
@@ -438,6 +440,8 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
     uint withdrawAmountDiff = queuedWithdrawAmount > lastQueuedWithdrawAmount
       ? queuedWithdrawAmount.sub(lastQueuedWithdrawAmount)
       : 0;
+
+    console.log("withdrawAmountDiff", withdrawAmountDiff);
 
     // Take management / performance fee from previous round and deduct
     lockedBalance = lockedBalance.sub(_collectVaultFees(lockedBalance.add(withdrawAmountDiff)));
@@ -457,6 +461,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    * @return vaultFee is the fee deducted
    */
   function _collectVaultFees(uint pastWeekBalance) internal returns (uint) {
+    console.log("pastWeekBalance", pastWeekBalance);
     (uint performanceFeeInAsset, , uint vaultFee) = VaultLifecycle.getVaultFees(
       vaultState,
       pastWeekBalance,
