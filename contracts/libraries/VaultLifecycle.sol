@@ -89,13 +89,7 @@ library VaultLifecycle {
   {
     uint prevLockedAmount = vaultState.lastLockedAmount;
 
-    console.log("prevLockedAmount", prevLockedAmount);
-    console.log("currentLockedBalance", currentLockedBalance);
-    console.log("totalPending", vaultState.totalPending);
-
     uint lockedBalanceSansPending = currentLockedBalance.sub(vaultState.totalPending);
-    console.log("lockedBalanceSansPending", lockedBalanceSansPending);
-    
 
     uint _performanceFeeInAsset;
     uint _managementFeeInAsset;
