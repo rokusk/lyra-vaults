@@ -22,27 +22,12 @@ library Vault {
   uint internal constant PLACEHOLDER_UINT = 1;
 
   struct VaultParams {
-    // Option type the vault is selling
-    bool isPut;
     // Token decimals for vault shares
     uint8 decimals;
-    // Asset used in Theta / Delta Vault
-    address asset;
-    // Underlying asset of the options sold by vault
-    address underlying;
-    // Minimum supply of the vault shares issued, for ETH it's 10**10
-    uint56 minimumSupply;
     // Vault cap
     uint104 cap;
-  }
-
-  struct OptionState {
-    // Option that the vault is shorting / longing in the next cycle
-    address nextOption;
-    // Option that the vault is currently shorting / longing
-    address currentOption;
-    // The timestamp when the `nextOption` can be used by the vault
-    uint32 nextOptionReadyAt;
+    // Asset used in Theta / Delta Vault
+    address asset;
   }
 
   struct VaultState {
@@ -54,6 +39,8 @@ library Vault {
     // Amount that was locked for selling options in the previous round
     // used for calculating performance fee deduction
     uint104 lastLockedAmount;
+    // locked amount left to be used for collateral;
+    uint lockedAmountLeft;
     // 32 byte slot 2
     // Stores the total tally of how much of `asset` there is
     // to be used to mint rTHETA tokens

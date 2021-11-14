@@ -19,6 +19,10 @@ yarn coverage
 ### Lint
 
 ```
+# run lint check
 yarn lint
+
+# fix contract
+yarn prettier:sol
 ```
 

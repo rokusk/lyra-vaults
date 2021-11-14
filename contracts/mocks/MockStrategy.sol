@@ -8,11 +8,13 @@ contract MockStrategy is IVaultStrategy {
   uint public mockedSize;
   uint public mockedMinPremium;
 
+  bytes public mockedStrategyBytes;
+
   bool public isValid;
 
-  function setStrategy(
-    bytes memory /*strategyBytes*/
-  ) external override {}
+  function setStrategy(bytes memory _strategyBytes) external override {
+    mockedStrategyBytes = _strategyBytes;
+  }
 
   function setMockedTradeRequest(
     uint _listingId,
