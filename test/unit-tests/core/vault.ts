@@ -233,7 +233,6 @@ describe('Unit test: Basic LyraVault flow', async () => {
       const wethBefore = await weth.balanceOf(vault.address)
       await vault.trade()
       const wethAfter = await weth.balanceOf(vault.address)
-      console.log(`wethBefore`, )
       expect(wethBefore.sub(collateralAmount).add(premiumInWeth)).to.be.eq(wethAfter)      
     })
 
