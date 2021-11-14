@@ -77,7 +77,7 @@ contract LyraVault is Ownable, BaseVault {
     uint collateralAfter = IERC20(vaultParams.asset).balanceOf(address(this));
 
     uint assetUsed = collateralBefore.sub(collateralAfter);
-    
+
     // update the remaining locked amount
     vaultState.lockedAmountLeft = vaultState.lockedAmountLeft.sub(assetUsed);
 
@@ -87,7 +87,6 @@ contract LyraVault is Ownable, BaseVault {
 
     // exhcnage sUSD to WETH
     synthetix.exchange(premiumCurrencyKey, realPremium, wethCurrencyKey);
-
   }
 
   /// @notice settle outstanding short positions.
@@ -105,7 +104,6 @@ contract LyraVault is Ownable, BaseVault {
 
   /// @notice roll to next round
   function rollToNextRound() external {
-
     // todo: cannot roll over anytime. This should be done after settlement
 
     (uint lockedBalance, uint queuedWithdrawAmount) = _rollToNextRound(uint(lastQueuedWithdrawAmount));
