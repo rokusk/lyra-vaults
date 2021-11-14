@@ -4,7 +4,7 @@ import { parseEther, parseUnits } from '@ethersproject/units';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { LyraVault, MockERC20, MockOptionMarket, MockStrategy, MockSynthetix, WETH9 } from '../../../typechain';
+import { LyraVault, MockERC20, MockOptionMarket, MockStrategy, MockSynthetix } from '../../../typechain';
 import { toBytes32 } from '../utils/synthetixUtils';
 
 describe('Unit test: share calculating for pending deposit and withdraw', async () => {
@@ -16,7 +16,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
   let mockedMarket: MockOptionMarket;
   let mockedSynthetix: MockSynthetix
   
-  let weth: WETH9
+  let seth: MockERC20
   let susd: MockERC20
 
   // signers
@@ -30,7 +30,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
 
   // mocked key for synthetix
   const susdKey = toBytes32('sUSD');
-  const wethKey = toBytes32('wETH');
+  const sethKey = toBytes32('wETH');
 
   // constants across tests
 
@@ -55,11 +55,8 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
     const MockSynthetixFactory = await ethers.getContractFactory('MockSynthetix');
     mockedSynthetix = (await MockSynthetixFactory.deploy()) as MockSynthetix;
 
-
-    const WETH9Factory = await ethers.getContractFactory("WETH9");
-    weth = (await WETH9Factory.deploy()) as WETH9;
-
     const MockERC20Factory = await ethers.getContractFactory("MockERC20");
+    seth = (await MockERC20Factory.deploy('Synth ETH', 'sETH', 18)) as MockERC20;
     susd = (await MockERC20Factory.deploy('Synth USD', 'sUSD', 18)) as MockERC20;
   });
 
@@ -71,7 +68,6 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
     
     vault = (await LyraVaultFactory.deploy(
       mockedMarket.address,
-      weth.address,
       susd.address,
       owner.address, // feeRecipient,
       mockedSynthetix.address,
@@ -80,10 +76,10 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
       {
         decimals,
         cap,
-        asset: weth.address
+        asset: seth.address
       },
       susdKey,
-      wethKey,
+      sethKey,
     )) as LyraVault;
 
     // set strategy
@@ -93,24 +89,28 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
   before('mint asset for option market and synthetix', async() => {
     await susd.mint(mockedMarket.address, parseUnits('100000'))
 
-    await weth.connect(anyone).deposit({value: parseEther('100')})
-    await weth.connect(anyone).transfer(mockedSynthetix.address, parseEther('100'))
+    await seth.connect(anyone).mint(mockedSynthetix.address, parseEther('100'))
   })
 
   before('setup mocked synthetix', async() => {
     await mockedSynthetix.setMockedKeyToAddress(susdKey, susd.address)
-    await mockedSynthetix.setMockedKeyToAddress(wethKey, weth.address)
+    await mockedSynthetix.setMockedKeyToAddress(sethKey, seth.address)
   })
 
   describe('round 1', async() => {
 
     describe('basic deposit and withdraw in round 1.', async() => {
-      it('should deposit weth into the contract and update the receipt', async() => {
+      it('should return 0 share before any deposit', async() => {
+        const {heldByAccount, heldByVault} = await vault.shareBalances(depositor.address)
+        expect(heldByAccount).to.be.eq(0)
+        expect(heldByVault).to.be.eq(0)
+      })
+      it('should deposit seth into the contract and update the receipt', async() => {
         const initState = await vault.vaultState();
         const initReceipt = await vault.depositReceipts(depositor.address);
         
-        await weth.connect(depositor).deposit({value: depositAmount})
-        await weth.connect(depositor).approve(vault.address, ethers.constants.MaxUint256)
+        await seth.mint(depositor.address, depositAmount)
+        await seth.connect(depositor).approve(vault.address, ethers.constants.MaxUint256)
         await vault.connect(depositor).deposit(depositAmount)
   
         const newState = await vault.vaultState();
@@ -123,33 +123,8 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
       it('should be able to use depositFor to do the same thing for depositor', async() => {
         const initReceipt = await vault.depositReceipts(depositor.address);
         
-        await weth.connect(anyone).deposit({value: depositAmount})
-        await weth.connect(anyone).approve(vault.address, ethers.constants.MaxUint256)
-        await vault.connect(anyone).depositFor(depositAmount, depositor.address)
-  
-        const newReceipt = await vault.depositReceipts(depositor.address);
-  
-        expect(newReceipt.amount.sub(initReceipt.amount)).to.be.eq(depositAmount)
-        expect(newReceipt.unredeemedShares).to.be.eq(initReceipt.unredeemedShares)
-      })
-      it('should deposit eth into the contract and update the receipt', async() => {
-        const initState = await vault.vaultState();
-        const initReceipt = await vault.depositReceipts(depositor.address);
-        
-        await vault.connect(depositor).depositETH({value: depositAmount})
-  
-        const newState = await vault.vaultState();
-        const newReceipt = await vault.depositReceipts(depositor.address);
-  
-        expect(newState.totalPending.sub(initState.totalPending)).to.be.eq(depositAmount)
-        expect(newReceipt.amount.sub(initReceipt.amount)).to.be.eq(depositAmount)
-        expect(newReceipt.unredeemedShares).to.be.eq(initReceipt.unredeemedShares)
-      })
-      it('should be able to use depositFor to do the same thing for depositor', async() => {
-        const initReceipt = await vault.depositReceipts(depositor.address);
-        
-        await weth.connect(anyone).deposit({value: depositAmount})
-        await weth.connect(anyone).approve(vault.address, ethers.constants.MaxUint256)
+        await seth.connect(anyone).mint(anyone.address,  depositAmount)
+        await seth.connect(anyone).approve(vault.address, ethers.constants.MaxUint256)
         await vault.connect(anyone).depositFor(depositAmount, depositor.address)
   
         const newReceipt = await vault.depositReceipts(depositor.address);
@@ -202,7 +177,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
     describe('trade during first round', async () => {
       it('should revert because the first round is not started yet', async() => {
         // set mocked asset only
-        await mockedMarket.setMockCollateral(weth.address, parseEther('1'))
+        await mockedMarket.setMockCollateral(seth.address, parseEther('1'))
         await mockedMarket.setMockPremium(susd.address, 0)
         await expect(vault.trade()).to.be.revertedWith('SafeMath: subtraction overflow')
       })
@@ -229,7 +204,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
         expect(heldByAccount).to.be.eq(0)
   
         // has deposited 4 in total
-        const expectedShares = parseEther('4')
+        const expectedShares = parseEther('2')
         expect(heldByVault).to.be.eq(expectedShares)
       })
   
@@ -287,19 +262,19 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
       })
   
       before('set mocked premium', async() => {
-        await mockedMarket.setMockCollateral(weth.address, collateralAmount)
+        await mockedMarket.setMockCollateral(seth.address, collateralAmount)
         await mockedMarket.setMockPremium(susd.address, minPremium)
       })
   
       before('set mocked synthetix return', async() => {
-        await mockedSynthetix.setMockedTradeAmount(weth.address, round3PremiumInEth)
+        await mockedSynthetix.setMockedTradeAmount(seth.address, round3PremiumInEth)
       })
   
       it('should successfully trade', async() => {
-        const wethBefore = await weth.balanceOf(vault.address)
+        const sethBefore = await seth.balanceOf(vault.address)
         await vault.trade()
-        const wethAfter = await weth.balanceOf(vault.address)
-        expect(wethBefore.sub(collateralAmount).add(round3PremiumInEth)).to.be.eq(wethAfter)
+        const sethAfter = await seth.balanceOf(vault.address)
+        expect(sethBefore.sub(collateralAmount).add(round3PremiumInEth)).to.be.eq(sethAfter)
       })
   
     });
@@ -315,15 +290,14 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
       before('set mock settle data', async() => {
         await mockedMarket.setMockSettlement(settlementPayout)
   
-        // send weth to mock mark
-        await weth.connect(anyone).deposit({value: settlementPayout})
-        await weth.connect(anyone).transfer(mockedMarket.address, settlementPayout)
+        // send seth to mock mark
+        await seth.connect(anyone).mint(mockedMarket.address, settlementPayout)
       })
-      it('should settle a specific listing and get back collateral (weth)', async() => {
-        const vaultBalanceBefore = await weth.balanceOf(vault.address)
+      it('should settle a specific listing and get back collateral (seth)', async() => {
+        const vaultBalanceBefore = await seth.balanceOf(vault.address)
         const listingId = 0
         await vault.settle(listingId)
-        const vaultBalanceAfter = await weth.balanceOf(vault.address)
+        const vaultBalanceAfter = await seth.balanceOf(vault.address)
         expect(vaultBalanceAfter.sub(vaultBalanceBefore)).to.be.eq(settlementPayout)
       })
       it('should revert if trying to completeWithdraw', async() => {
@@ -343,12 +317,12 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
     })
     describe('after rollover', async() => {
       it('should be able to complete withdraw from previous rounds', async() => {
-        const wethBalanceBefore = await weth.balanceOf(vault.address)
+        const sethBalanceBefore = await seth.balanceOf(vault.address)
         await vault.connect(depositor).completeWithdraw()
-        const wethBalanceAfter = await weth.balanceOf(vault.address)
+        const sethBalanceAfter = await seth.balanceOf(vault.address)
 
-        const withdrawnAmount = wethBalanceBefore.sub(wethBalanceAfter)
-        const expectedWithrawnAmount = depositAmount.add(round3PremiumInEth.div(1/initiateWithdrawSharePercentage))
+        const withdrawnAmount = sethBalanceBefore.sub(sethBalanceAfter)
+        const expectedWithrawnAmount = depositAmount.div(2).add(round3PremiumInEth.div(1/initiateWithdrawSharePercentage))
         expect(expectedWithrawnAmount).to.be.eq(withdrawnAmount)
       })
     })

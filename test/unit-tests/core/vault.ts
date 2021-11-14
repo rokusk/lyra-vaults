@@ -2,7 +2,7 @@ import { parseEther, parseUnits } from '@ethersproject/units';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { LyraVault, MockOptionMarket, MockStrategy, MockSynthetix, MockERC20, WETH9 } from '../../../typechain';
+import { LyraVault, MockOptionMarket, MockStrategy, MockSynthetix, MockERC20 } from '../../../typechain';
 import { FEE_MULTIPLIER, WEEKS_PER_YEAR } from '../utils/constants';
 import { BigNumber } from 'ethers'
 import { toBytes32 } from '../utils/synthetixUtils';
@@ -16,7 +16,7 @@ describe('Unit test: Basic LyraVault flow', async () => {
   let mockedMarket: MockOptionMarket;
   let mockedSynthetix: MockSynthetix
   
-  let weth: WETH9
+  let seth: MockERC20
   let susd: MockERC20
 
   // signers
@@ -34,7 +34,7 @@ describe('Unit test: Basic LyraVault flow', async () => {
 
   // mocked key for synthetix
   const susdKey = toBytes32('sUSD');
-  const wethKey = toBytes32('wETH');
+  const sethKey = toBytes32('sETH');
   
 
   before('prepare signers', async () => {
@@ -57,21 +57,18 @@ describe('Unit test: Basic LyraVault flow', async () => {
 
     const MockERC20Factory = await ethers.getContractFactory('MockERC20');
     susd = (await MockERC20Factory.deploy('Synth USD', 'sUSD', 18)) as MockERC20;
-
-    const WETH9Factory = await ethers.getContractFactory("WETH9");
-    weth = (await WETH9Factory.deploy()) as WETH9;
+    seth = (await MockERC20Factory.deploy('Synth ETH', 'sUSD', 18)) as MockERC20;
   });
 
   before('mint asset for option market and synthetix', async() => {
     await susd.mint(mockedMarket.address, parseUnits('100000'))
 
-    await weth.connect(anyone).deposit({value: parseEther('100')})
-    await weth.connect(anyone).transfer(mockedSynthetix.address, parseEther('100'))
+    await seth.connect(anyone).mint(mockedSynthetix.address, parseEther('100'))
   })
 
   before('setup mocked synthetix', async() => {
     await mockedSynthetix.setMockedKeyToAddress(susdKey, susd.address)
-    await mockedSynthetix.setMockedKeyToAddress(wethKey, weth.address)
+    await mockedSynthetix.setMockedKeyToAddress(sethKey, seth.address)
   })
 
 
@@ -85,7 +82,6 @@ describe('Unit test: Basic LyraVault flow', async () => {
       
       vault = (await LyraVault.deploy(
         mockedMarket.address,
-        weth.address,
         susd.address,
         owner.address, // feeRecipient,
         mockedSynthetix.address,
@@ -94,13 +90,13 @@ describe('Unit test: Basic LyraVault flow', async () => {
         {
           decimals,
           cap,
-          asset: weth.address
+          asset: seth.address
         },
         susdKey,
-        wethKey,
+        sethKey,
       )) as LyraVault;
       const params = await vault.vaultParams();
-      expect(params.asset).to.be.eq(weth.address);
+      expect(params.asset).to.be.eq(seth.address);
       
       expect(params.decimals).to.be.eq(decimals);
       expect(await vault.optionMarket()).to.be.eq(mockedMarket.address);
@@ -158,11 +154,13 @@ describe('Unit test: Basic LyraVault flow', async () => {
   });
 
   describe('basic deposit', async() => {
-    it('should deposit eth into the contract', async() => {
+    it('should deposit ewth into the contract', async() => {
       
       const initReceipt = await vault.depositReceipts(depositor.address);
       
-      await vault.connect(depositor).depositETH({value: depositAmount})
+      await seth.mint(depositor.address, depositAmount)
+      await seth.connect(depositor).approve(vault.address, ethers.constants.MaxUint256)
+      await vault.connect(depositor).deposit(depositAmount)
 
       const newReceipt = await vault.depositReceipts(depositor.address);
 
@@ -174,7 +172,7 @@ describe('Unit test: Basic LyraVault flow', async () => {
   describe('trade before first round end', async () => {
     it('should revert because the first round is not started yet', async() => {
       // set mocked asset only
-      await mockedMarket.setMockCollateral(weth.address, parseEther('1'))
+      await mockedMarket.setMockCollateral(seth.address, parseEther('1'))
       await mockedMarket.setMockPremium(susd.address, 0)
 
       await expect(vault.trade()).to.be.revertedWith('SafeMath: subtraction overflow')
@@ -201,13 +199,13 @@ describe('Unit test: Basic LyraVault flow', async () => {
     // mock premium to 50 USD
     const minPremium = parseUnits('50')
 
-    const premiumInWeth = parseEther('0.01')
+    const premiumInSeth = parseEther('0.01')
 
     it('should revert if premium get from market is lower than strategy estimation', async() => {
       // set request and check result
       await mockedStrategy.setMockedTradeRequest(0, size, minPremium.add(1))
 
-      await mockedMarket.setMockCollateral(weth.address, collateralAmount)
+      await mockedMarket.setMockCollateral(seth.address, collateralAmount)
       await mockedMarket.setMockPremium(susd.address, minPremium)
 
       await expect(vault.trade()).to.be.revertedWith('premium too low')
@@ -224,16 +222,16 @@ describe('Unit test: Basic LyraVault flow', async () => {
       await mockedStrategy.setMockedTradeRequest(0, size, minPremium)
       await mockedStrategy.setMockedPostCheck(true)
 
-      await mockedMarket.setMockCollateral(weth.address, collateralAmount)
+      await mockedMarket.setMockCollateral(seth.address, collateralAmount)
       await mockedMarket.setMockPremium(susd.address, minPremium)
 
       // set synthetix exchange result
-      await mockedSynthetix.setMockedTradeAmount(weth.address, premiumInWeth)
+      await mockedSynthetix.setMockedTradeAmount(seth.address, premiumInSeth)
 
-      const wethBefore = await weth.balanceOf(vault.address)
+      const sethBefore = await seth.balanceOf(vault.address)
       await vault.trade()
-      const wethAfter = await weth.balanceOf(vault.address)
-      expect(wethBefore.sub(collateralAmount).add(premiumInWeth)).to.be.eq(wethAfter)      
+      const sethAfter = await seth.balanceOf(vault.address)
+      expect(sethBefore.sub(collateralAmount).add(premiumInSeth)).to.be.eq(sethAfter)      
     })
 
   });
@@ -243,15 +241,14 @@ describe('Unit test: Basic LyraVault flow', async () => {
     before('set mock settle data', async() => {
       await mockedMarket.setMockSettlement(settlementPayout)
 
-      // send weth to mock mark
-      await weth.connect(anyone).deposit({value: settlementPayout})
-      await weth.connect(anyone).transfer(mockedMarket.address, settlementPayout)
+      // mint seth to mock mark
+      await seth.connect(anyone).mint(mockedMarket.address, settlementPayout)
     })
-    it('should settle a specific listing and get back collateral (weth)', async() => {
-      const vaultBalanceBefore = await weth.balanceOf(vault.address)
+    it('should settle a specific listing and get back collateral (seth)', async() => {
+      const vaultBalanceBefore = await seth.balanceOf(vault.address)
       const listingId = 0
       await vault.settle(listingId)
-      const vaultBalanceAfter = await weth.balanceOf(vault.address)
+      const vaultBalanceAfter = await seth.balanceOf(vault.address)
       expect(vaultBalanceAfter.sub(vaultBalanceBefore)).to.be.eq(settlementPayout)
     })
   })

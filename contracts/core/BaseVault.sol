@@ -13,7 +13,6 @@ import {Initializable} from "@openzeppelin/contracts/proxy/Initializable.sol";
 import {Vault} from "../libraries/Vault.sol";
 import {VaultLifecycle} from "../libraries/VaultLifecycle.sol";
 import {ShareMath} from "../libraries/ShareMath.sol";
-import {IWETH} from "../interfaces/IWETH.sol";
 
 import "hardhat/console.sol";
 
@@ -64,9 +63,6 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    *  IMMUTABLES & CONSTANTS
    ***********************************************/
 
-  /// @notice WETH contract address
-  address public immutable WETH; // solhint-disable var-name-mixedcase
-
   // Number of weeks per year = 52.142857 weeks * FEE_MULTIPLIER = 52142857
   // Dividing by weeks per year requires doing num.mul(FEE_MULTIPLIER).div(WEEKS_PER_YEAR)
   uint private constant WEEKS_PER_YEAR = 52142857;
@@ -97,10 +93,8 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
 
   /**
    * @notice Initializes the contract with immutable variables
-   * @param _weth is the Wrapped Ether contract
    */
   constructor(
-    address _weth,
     address _feeRecipient,
     uint _managementFee,
     uint _performanceFee,
@@ -108,10 +102,6 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
     string memory _tokenSymbol,
     Vault.VaultParams memory _vaultParams
   ) ERC20(_tokenName, _tokenSymbol) {
-    require(_weth != address(0), "!_weth");
-
-    WETH = _weth;
-
     feeRecipient = _feeRecipient;
     performanceFee = _performanceFee;
     managementFee = _managementFee.mul(Vault.FEE_MULTIPLIER).div(WEEKS_PER_YEAR);
@@ -178,18 +168,6 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
   /************************************************
    *  DEPOSIT & WITHDRAWALS
    ***********************************************/
-
-  /**
-   * @notice Deposits ETH into the contract and mint vault shares. Reverts if the asset is not WETH.
-   */
-  function depositETH() external payable nonReentrant {
-    require(vaultParams.asset == WETH, "!WETH");
-    require(msg.value > 0, "!value");
-
-    _depositFor(msg.value, msg.sender);
-
-    IWETH(WETH).deposit{value: msg.value}();
-  }
 
   /**
    * @notice Deposits the `asset` from msg.sender.
@@ -478,12 +456,6 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    */
   function _transferAsset(address recipient, uint amount) internal {
     address asset = vaultParams.asset;
-    if (asset == WETH) {
-      IWETH(WETH).withdraw(amount);
-      (bool success, ) = recipient.call{value: amount}(""); // solhint-disable avoid-low-level-calls
-      require(success, "Transfer failed");
-      return;
-    }
     IERC20(asset).safeTransfer(recipient, amount);
   }
 

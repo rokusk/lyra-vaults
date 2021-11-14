@@ -39,7 +39,6 @@ contract LyraVault is Ownable, BaseVault {
 
   constructor(
     address _optionMarket,
-    address _weth,
     address _susd,
     address _feeRecipient,
     address _synthetix,
@@ -48,7 +47,7 @@ contract LyraVault is Ownable, BaseVault {
     Vault.VaultParams memory _vaultParams,
     bytes32 _premiumCurrencyKey,
     bytes32 _wethCurrencyKey
-  ) BaseVault(_weth, _feeRecipient, 0, 0, _tokenName, _tokenSymbol, _vaultParams) {
+  ) BaseVault(_feeRecipient, 0, 0, _tokenName, _tokenSymbol, _vaultParams) {
     optionMarket = IOptionMarket(_optionMarket);
     synthetix = ISynthetix(_synthetix);
     IERC20(_vaultParams.asset).approve(_optionMarket, uint(-1));
@@ -112,7 +111,4 @@ contract LyraVault is Ownable, BaseVault {
     vaultState.lockedAmountLeft = lockedBalance;
     lastQueuedWithdrawAmount = uint128(queuedWithdrawAmount);
   }
-
-  /// @dev get eth from weth
-  receive() external payable {}
 }
