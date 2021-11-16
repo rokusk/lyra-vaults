@@ -203,6 +203,9 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
     })
   
     describe('redeem shares', async() => {
+      it('should revert while redeeming 0 shares', async() => {
+        await expect(vault.connect(depositor).redeem(0)).to.be.revertedWith('!numShares')
+      })
       it('should has some share balance after rollover', async() => {
         const {heldByVault, heldByAccount} =  await vault.shareBalances(depositor.address)
         expect(heldByAccount).to.be.eq(0)
@@ -320,6 +323,10 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
       expect(round).to.be.eq(3)
     })
     describe('after rollover', async() => {
+      it('should revert when trying to initiateWithdraw again before completing queued withdraw', async() => {
+        const sharesToWithdraw = depositAmount
+        await expect(vault.connect(depositor).initiateWithdraw(sharesToWithdraw)).to.be.revertedWith('Existing withdraw')
+      })
       it('should be able to complete withdraw from previous rounds', async() => {
         const sethBalanceBefore = await seth.balanceOf(vault.address)
         await vault.connect(depositor).completeWithdraw()
