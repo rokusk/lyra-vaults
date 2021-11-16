@@ -132,6 +132,10 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
         expect(newReceipt.amount.sub(initReceipt.amount)).to.be.eq(depositAmount)
         expect(newReceipt.unredeemedShares).to.be.eq(initReceipt.unredeemedShares)
       })
+
+      it('should revert when using initiateWithdraw with shareNum = 0', async() => {
+        await expect(vault.connect(depositor).initiateWithdraw(0)).to.be.revertedWith('!numShares')
+      })
   
       it('should revert when using initiateWithdraw becuase user has no shares', async() => {
         const sharesToWithdraw = depositAmount

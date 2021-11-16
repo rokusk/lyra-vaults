@@ -107,6 +107,9 @@ describe('Unit test: Basic LyraVault flow', async () => {
   });
 
   describe('owner settings', async() => {
+    it('shoud revert when setting cap as 0', async() => {
+      await expect(vault.connect(owner).setCap(0)).to.be.revertedWith('!newCap')
+    })
     it('owner should be able to set a new cap', async() => {
       await vault.connect(owner).setCap(initCap)
       
@@ -133,10 +136,16 @@ describe('Unit test: Basic LyraVault flow', async () => {
     it('should revert when trying to set a performance fee that\'s too high', async() => {
       await expect(vault.connect(owner).setPerformanceFee(100*FEE_MULTIPLIER)).to.be.revertedWith('Invalid performance fee')
     })
+    it('should revert when trying to set a invalid feeRecipient high', async() => {
+      await expect(vault.connect(owner).setFeeRecipient(ethers.constants.AddressZero)).to.be.revertedWith('!newFeeRecipient')
+    })
     it('owner should be able to set a new fee recipient address', async() => {
       await vault.connect(owner).setFeeRecipient(feeRecipient.address)
       const recipient = await vault.feeRecipient()
       expect(recipient).to.be.eq(feeRecipient.address);
+    })
+    it('should revert if trying to set the same feeRecipient as the existing one', async() => {
+      await expect(vault.connect(owner).setFeeRecipient(feeRecipient.address)).to.be.revertedWith('Must be new feeRecipient')
     })
   })
 
@@ -154,6 +163,15 @@ describe('Unit test: Basic LyraVault flow', async () => {
   });
 
   describe('basic deposit', async() => {
+    it('should revert if trying to deposit 0', async() => {
+      await expect(vault.connect(anyone).deposit(0)).to.be.revertedWith('!amount');
+    })
+    it('should revert if trying to use depositFor with amount = 0', async() => {
+      await expect(vault.connect(anyone).depositFor(0, depositor.address)).to.be.revertedWith('!amount');
+    })
+    it('should revert if trying to deposit to a 0 address', async() => {
+      await expect(vault.connect(anyone).depositFor(1, ethers.constants.AddressZero)).to.be.revertedWith('!creditor');
+    })
     it('should deposit ewth into the contract', async() => {
       
       const initReceipt = await vault.depositReceipts(depositor.address);
@@ -166,6 +184,12 @@ describe('Unit test: Basic LyraVault flow', async () => {
 
       expect(newReceipt.amount.sub(initReceipt.amount)).to.be.eq(depositAmount)
       expect(newReceipt.unredeemedShares.sub(initReceipt.unredeemedShares)).to.be.eq(0)      
+    })
+    it('should revert if deposit amount exceed the cap', async() => {
+      const depositAmount = initCap.add(1)
+      await seth.mint(depositor.address, depositAmount)
+      await seth.connect(depositor).approve(vault.address, ethers.constants.MaxUint256)
+      await expect(vault.connect(depositor).deposit(depositAmount)).to.be.revertedWith('Exceed cap')
     })
   })
 
