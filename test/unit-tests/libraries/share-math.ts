@@ -1,5 +1,6 @@
 import { expect, util } from 'chai';
 import { ethers } from 'hardhat';
+import { thomsonCrossSectionDependencies } from 'mathjs';
 import { ShareMathTest } from '../../../typechain';
 
 describe('Unit test: ShareMath Library', async () => {
@@ -16,15 +17,11 @@ describe('Unit test: ShareMath Library', async () => {
     })
   })
   describe('#sharesToAsset', async() => {
+    it('shoudl revert if share price is 0', async() => {
       await expect(tester.sharesToAsset(0, 1, 0)).to.be.revertedWith('Invalid assetPerShare')
+    })
   })
-  describe('#getSharesFromReceipt', async() => {
-      
-  })
-  describe('#pricePerShare', async() => {
-      
-  })
-
+  
   describe('#assertUint104', async() => {
     it('should revert if pass in number > uint104', async() => {
       await expect(tester.assertUint104(ethers.constants.MaxInt256)).to.be.revertedWith('Overflow uint104')
