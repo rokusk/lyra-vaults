@@ -150,6 +150,13 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
         const sharesToWithdraw = depositAmount
         await expect(vault.connect(depositor).redeem(sharesToWithdraw)).to.be.revertedWith('Exceeds available')
       })
+
+      it('should get 0 share if calling maxRedeem with no deposit Receipt', async() => {
+        const sharesBefore = await vault.balanceOf(anyone.address)
+        await vault.connect(anyone).maxRedeem()
+        const sharesAfter = await vault.balanceOf(anyone.address)
+        expect(sharesAfter).to.be.eq(sharesBefore)
+      })
   
       it('should get 0 share out by calling maxRedeem becuase depositor has no unreedemed shares', async() => {
         const sharesBefore = await vault.balanceOf(depositor.address)
