@@ -1,6 +1,5 @@
-import { expect, util } from 'chai';
+import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { thomsonCrossSectionDependencies } from 'mathjs';
 import { ShareMathTest } from '../../../typechain';
 
 describe('Unit test: ShareMath Library', async () => {
