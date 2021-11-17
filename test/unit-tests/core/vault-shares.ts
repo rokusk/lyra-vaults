@@ -326,7 +326,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
         expect(vaultBalanceAfter.sub(vaultBalanceBefore)).to.be.eq(settlementPayout)
       })
       it('should revert if trying to completeWithdraw', async() => {
-        await expect(vault.connect(depositor).completeWithdraw()).to.be.revertedWith('Round not closed')
+        await expect(vault.connect(depositor).completeWithdraw()).to.be.revertedWith('Round in progress')
       })
       it('should rollover the vault to the next round', async() => {
         await vault.closeRound()
