@@ -6,11 +6,11 @@ import {ShareMath} from "../libraries/ShareMath.sol";
 import {Vault} from "../libraries/Vault.sol";
 
 /**
- * This is a tester contract where we expose all internal functions from ShareMath to external functions. 
- * Just so we can easily test them.  
+ * This is a tester contract where we expose all internal functions from ShareMath to external functions.
+ * Just so we can easily test them.
  */
 contract ShareMathTest {
-    function assetToShares(
+  function assetToShares(
     uint assetAmount,
     uint assetPerShare,
     uint decimals
