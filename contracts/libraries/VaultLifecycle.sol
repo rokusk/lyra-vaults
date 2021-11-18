@@ -100,6 +100,8 @@ library VaultLifecycle {
     // deposits and withdrawals, is positive. If it is negative, last week's
     // option expired ITM past breakeven, and the vault took a loss so we
     // do not collect performance fee for last week
+
+    // todo: update management fee to exclude profit?
     if (lockedBalanceSansPending > prevLockedAmount) {
       _performanceFeeInAsset = performanceFeePercent > 0
         ? lockedBalanceSansPending.sub(prevLockedAmount).mul(performanceFeePercent).div(100 * Vault.FEE_MULTIPLIER)

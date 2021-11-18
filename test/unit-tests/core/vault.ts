@@ -35,7 +35,13 @@ describe('Unit test: Basic LyraVault flow', async () => {
   // mocked key for synthetix
   const susdKey = toBytes32('sUSD');
   const sethKey = toBytes32('sETH');
-  
+
+
+  let totalDeposit: BigNumber
+
+  // mocked premium in USD and ETH
+  const roundPremiumSUSD = parseUnits('50')
+  const roundPremiumInEth = parseEther('0.01')
 
   before('prepare signers', async () => {
     const addresses = await ethers.getSigners();
@@ -205,6 +211,7 @@ describe('Unit test: Basic LyraVault flow', async () => {
 
   describe('start the second round', async()=> {
     it('should be able to close the previous round', async() => {
+      totalDeposit = await seth.balanceOf(vault.address)
       await vault.connect(owner).closeRound()
     })
     it('should be able to rollover the position', async() => {
@@ -220,42 +227,37 @@ describe('Unit test: Basic LyraVault flow', async () => {
     const size = parseUnits('1')
     const collateralAmount = parseUnits('1')
 
-    // mock premium to 50 USD
-    const minPremium = parseUnits('50')
-
-    const premiumInSeth = parseEther('0.01')
-
     it('should revert if premium get from market is lower than strategy estimation', async() => {
       // set request and check result
-      await mockedStrategy.setMockedTradeRequest(0, size, minPremium.add(1))
+      await mockedStrategy.setMockedTradeRequest(0, size, roundPremiumSUSD.add(1))
 
       await mockedMarket.setMockCollateral(seth.address, collateralAmount)
-      await mockedMarket.setMockPremium(susd.address, minPremium)
+      await mockedMarket.setMockPremium(susd.address, roundPremiumSUSD)
 
       await expect(vault.trade()).to.be.revertedWith('premium too low')
     })
 
     it('should revert if post trade check return false', async() => {
-      await mockedStrategy.setMockedTradeRequest(0, size, minPremium)
+      await mockedStrategy.setMockedTradeRequest(0, size, roundPremiumSUSD)
       await mockedStrategy.setMockedPostCheck(false)
       await expect(vault.trade()).to.be.revertedWith('bad trade')
     })
 
     it('should successfully trade with returned amount', async() => {
       // set request and check result
-      await mockedStrategy.setMockedTradeRequest(0, size, minPremium)
+      await mockedStrategy.setMockedTradeRequest(0, size, roundPremiumSUSD)
       await mockedStrategy.setMockedPostCheck(true)
 
       await mockedMarket.setMockCollateral(seth.address, collateralAmount)
-      await mockedMarket.setMockPremium(susd.address, minPremium)
+      await mockedMarket.setMockPremium(susd.address, roundPremiumSUSD)
 
       // set synthetix exchange result
-      await mockedSynthetix.setMockedTradeAmount(seth.address, premiumInSeth)
+      await mockedSynthetix.setMockedTradeAmount(seth.address, roundPremiumInEth)
 
       const sethBefore = await seth.balanceOf(vault.address)
       await vault.trade()
       const sethAfter = await seth.balanceOf(vault.address)
-      expect(sethBefore.sub(collateralAmount).add(premiumInSeth)).to.be.eq(sethAfter)      
+      expect(sethBefore.sub(collateralAmount).add(roundPremiumInEth)).to.be.eq(sethAfter)      
     })
 
   });
@@ -282,14 +284,24 @@ describe('Unit test: Basic LyraVault flow', async () => {
       await ethers.provider.send("evm_increaseTime", [86400*7])
       await ethers.provider.send("evm_mine", [])
     })
-    it('should rollover the vault to the next round', async() => {
+    it('should rollover the vault to the next round, and pay the fee recpient fees', async() => {
       const vaultStateBefore = await vault.vaultState()
-      
+      const recipientBalanceBefore = await seth.balanceOf(feeRecipient.address)
+
+      await vault.closeRound()
       await vault.rollToNextRound()
 
       const vaultStateAfter = await vault.vaultState()
 
       expect(vaultStateBefore.round + 1).to.be.eq(vaultStateAfter.round)
+
+      const roundPerformanceFee = roundPremiumInEth.mul(performanceFee).div(100 * FEE_MULTIPLIER)
+
+      const weeklyManagementFee = await vault.managementFee()
+      const roundManagementFee = totalDeposit.add(roundPremiumInEth).mul(weeklyManagementFee).div(100 * FEE_MULTIPLIER)
+
+      const recipientBalanceAfter = await seth.balanceOf(feeRecipient.address)
+      expect(recipientBalanceAfter.sub(recipientBalanceBefore)).to.be.eq(roundManagementFee.add(roundPerformanceFee))
     })
   })
 }); 
