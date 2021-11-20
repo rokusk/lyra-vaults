@@ -296,7 +296,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
     // This checks if there is a withdrawal
     require(withdrawalShares > 0, "Not initiated");
 
-    require(withdrawalRound < vaultState.round, "Round not closed");
+    require(withdrawalRound < vaultState.round, "Round in progress");
 
     // We leave the round number as non-zero to save on gas for subsequent writes
     withdrawals[msg.sender].shares = 0;

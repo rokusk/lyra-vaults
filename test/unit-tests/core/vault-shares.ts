@@ -23,6 +23,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
   let anyone: SignerWithAddress;
   let owner: SignerWithAddress;
   let depositor: SignerWithAddress
+  let shrimp: SignerWithAddress // user with dust deposit
 
   // fix deposit amount at 1 eth
   const depositAmount = parseEther('1')
@@ -43,6 +44,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
     owner = addresses[0];
     anyone = addresses[1];
     depositor = addresses[2]
+    shrimp = addresses[3]
   });
 
   before('prepare mocked contracts', async () => {
@@ -132,6 +134,10 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
         expect(newReceipt.amount.sub(initReceipt.amount)).to.be.eq(depositAmount)
         expect(newReceipt.unredeemedShares).to.be.eq(initReceipt.unredeemedShares)
       })
+
+      it('should revert when using initiateWithdraw with shareNum = 0', async() => {
+        await expect(vault.connect(depositor).initiateWithdraw(0)).to.be.revertedWith('!numShares')
+      })
   
       it('should revert when using initiateWithdraw becuase user has no shares', async() => {
         const sharesToWithdraw = depositAmount
@@ -145,6 +151,13 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
       it('should revert when calling redeem becuase depositor has no unreedemed shares', async() => {
         const sharesToWithdraw = depositAmount
         await expect(vault.connect(depositor).redeem(sharesToWithdraw)).to.be.revertedWith('Exceeds available')
+      })
+
+      it('should get 0 share if calling maxRedeem with no deposit Receipt', async() => {
+        const sharesBefore = await vault.balanceOf(anyone.address)
+        await vault.connect(anyone).maxRedeem()
+        const sharesAfter = await vault.balanceOf(anyone.address)
+        expect(sharesAfter).to.be.eq(sharesBefore)
       })
   
       it('should get 0 share out by calling maxRedeem becuase depositor has no unreedemed shares', async() => {
@@ -199,6 +212,9 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
     })
   
     describe('redeem shares', async() => {
+      it('should revert while redeeming 0 shares', async() => {
+        await expect(vault.connect(depositor).redeem(0)).to.be.revertedWith('!numShares')
+      })
       it('should has some share balance after rollover', async() => {
         const {heldByVault, heldByAccount} =  await vault.shareBalances(depositor.address)
         expect(heldByAccount).to.be.eq(0)
@@ -217,6 +233,15 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
         const shareAfter = await vault.balanceOf(depositor.address)
         
         expect(shareAfter.sub(shareBefore)).to.be.eq(redeemAmount)
+      })
+    })
+
+    describe('deposit asset', async() => {
+      it('should allow people to deposit asset into the vault', async() => {
+        // mint 50 wei to shrimp, make sure he has more than 1 share
+        await seth.mint(shrimp.address, 50)
+        await seth.connect(shrimp).approve(vault.address, ethers.constants.MaxUint256)
+        await vault.connect(shrimp).deposit(50)
       })
     })
   
@@ -301,7 +326,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
         expect(vaultBalanceAfter.sub(vaultBalanceBefore)).to.be.eq(settlementPayout)
       })
       it('should revert if trying to completeWithdraw', async() => {
-        await expect(vault.connect(depositor).completeWithdraw()).to.be.revertedWith('Round not closed')
+        await expect(vault.connect(depositor).completeWithdraw()).to.be.revertedWith('Round in progress')
       })
       it('should rollover the vault to the next round', async() => {
         await vault.closeRound()
@@ -309,13 +334,17 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
     })
   })
 
-  describe('round 3', async() => {
+  describe('round 3: vault lose money', async() => {
     before('rollover to round 3', async() => {
       await vault.connect(owner).rollToNextRound()
       const {round} = await vault.vaultState()
       expect(round).to.be.eq(3)
     })
     describe('after rollover', async() => {
+      it('should revert when trying to initiateWithdraw again before completing queued withdraw', async() => {
+        const sharesToWithdraw = depositAmount
+        await expect(vault.connect(depositor).initiateWithdraw(sharesToWithdraw)).to.be.revertedWith('Existing withdraw')
+      })
       it('should be able to complete withdraw from previous rounds', async() => {
         const sethBalanceBefore = await seth.balanceOf(vault.address)
         await vault.connect(depositor).completeWithdraw()
@@ -325,8 +354,72 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
         const expectedWithrawnAmount = depositAmount.div(2).add(round3PremiumInEth.div(1/initiateWithdrawSharePercentage))
         expect(expectedWithrawnAmount).to.be.eq(withdrawnAmount)
       })
+      it('should be able to single a withdraw', async() => {
+        // only initiate to withdraw 1 share, so that it will revert when we try to complete the withdraw but share price < 1.
+        await vault.connect(shrimp).initiateWithdraw(1)
+      })
+    })
+    describe('stimulate a trade', async () => {
+      const size = parseUnits('1')
+      const collateralAmount = parseUnits('1')
+      const minPremium = parseUnits('400')
+      const premiumInEth = parseEther('0.1')
+  
+      before('set mocked response from strategy', async() => {
+        // set request and check result
+        await mockedStrategy.setMockedTradeRequest(0, size, minPremium)
+        await mockedStrategy.setMockedPostCheck(true)
+      })
+  
+      before('set mocked premium', async() => {
+        await mockedMarket.setMockCollateral(seth.address, collateralAmount)
+        await mockedMarket.setMockPremium(susd.address, minPremium)
+      })
+  
+      before('set mocked synthetix return', async() => {
+        await mockedSynthetix.setMockedTradeAmount(seth.address, premiumInEth)
+      })
+  
+      it('should successfully trade', async() => {
+        const sethBefore = await seth.balanceOf(vault.address)
+        await vault.trade()
+        const sethAfter = await seth.balanceOf(vault.address)
+        expect(sethBefore.sub(collateralAmount).add(premiumInEth)).to.be.eq(sethAfter)
+      })
+    });
+  
+    describe('settle and close', async() => {
+      // assume option expires ITM, only get 40% of the collateral out!
+      const settlementPayout = parseEther('0.4')
+      before('simulate time pass', async() => {
+        await ethers.provider.send("evm_increaseTime", [86400*7])
+        await ethers.provider.send("evm_mine", [])
+      })
+      before('set mock settle data', async() => {
+        await mockedMarket.setMockSettlement(settlementPayout)
+  
+        // send seth to mock mark
+        await seth.connect(anyone).mint(mockedMarket.address, settlementPayout)
+      })
+      it('should settle a specific listing and get back collateral (seth)', async() => {
+        const vaultBalanceBefore = await seth.balanceOf(vault.address)
+        const listingId = 0
+        await vault.settle(listingId)
+        const vaultBalanceAfter = await seth.balanceOf(vault.address)
+        expect(vaultBalanceAfter.sub(vaultBalanceBefore)).to.be.eq(settlementPayout)
+      })
+      it('should rollover the vault to the next round', async() => {
+        await vault.closeRound()
+      })
     })
   })
 
-  
+  describe('round 4', async() => {
+    before('rollover to round 4', async() => {
+      await vault.connect(owner).rollToNextRound()
+    })
+    it('should revert when trying to complete the withdraw, because the collateral is 0', async() => {
+      await expect(vault.connect(shrimp).completeWithdraw()).to.be.revertedWith('!withdrawAmount')
+    })
+  })  
 }); 
