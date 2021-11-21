@@ -102,4 +102,6 @@ interface IOptionMarket {
   function setBoardBaseIv(uint boardId, uint baseIv) external;
 
   function setListingSkew(uint listingId, uint skew) external;
+
+  function getBoardListings(uint boardId) external view returns (uint[] memory);
 }

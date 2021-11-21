@@ -1,21 +1,40 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.7.0;
 
+// Hardhat
+import "hardhat/console.sol";
+
+// Interfaces
 import {IVaultStrategy} from "../interfaces/IVaultStrategy.sol";
 import {IOptionMarket} from "../interfaces/IOptionMarket.sol";
+import {IOptionGreekCache} from "../interfaces/IOptionGreekCache.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
+// Libraries
+import "../synthetix/SafeDecimalMath.sol";
+import "../synthetix/SignedSafeDecimalMath.sol";
+
 contract DeltaStrategy is IVaultStrategy, Ownable {
+  using SafeMath for uint;
+  using SafeDecimalMath for uint;
+  using SignedSafeMath for int;
+  using SignedSafeDecimalMath for int;
+
   address public immutable blackScholes;
-  address public immutable optionMarketViwer;
+  IOptionMarket public immutable optionMarket;
+  IOptionGreekCache public immutable greekCache;
   address public immutable vault;
 
   // example strategy detail
   struct DeltaStrategyDetail {
-    uint128 maxIv; // should not trade is iv is above this number
-    uint128 minIv; // should not trade is iv is below this number
-    uint128 size;
-    uint128 minInterval;
+    uint maxTimeToExpiry;
+    uint minTimeToExpiry;
+    int targetDelta;
+    int maxDeltaGap;
+    uint maxIv;
+    uint minIv;
+    uint size;
+    uint minInterval;
   }
 
   DeltaStrategyDetail public currentStrategy;
@@ -23,11 +42,13 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
   constructor(
     address _vault,
     address _blackScholes,
-    address _optionMarketViewer
+    IOptionMarket _optionMarket,
+    IOptionGreekCache _greekCache
   ) {
     vault = _vault;
     blackScholes = _blackScholes;
-    optionMarketViwer = _optionMarketViewer;
+    optionMarket = _optionMarket;
+    greekCache = _greekCache;
   }
 
   /**
@@ -36,11 +57,26 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
    */
   function setStrategy(bytes memory strategyBytes) external override onlyOwner {
     //todo: check that the vault is in a state that allow changing strategy
-    (uint128 maxIv, uint128 minIv, uint128 size, uint128 minInterval) = abi.decode(
-      strategyBytes,
-      (uint128, uint128, uint128, uint128)
-    );
-    currentStrategy = DeltaStrategyDetail({maxIv: maxIv, minIv: minIv, size: size, minInterval: minInterval});
+    (
+      uint maxTimeToExpiry,
+      uint minTimeToExpiry,
+      int targetDelta,
+      int maxDeltaGap,
+      uint maxIv,
+      uint minIv,
+      uint size,
+      uint minInterval
+    ) = abi.decode(strategyBytes, (uint, uint, int, int, uint, uint, uint, uint));
+    currentStrategy = DeltaStrategyDetail({
+      maxTimeToExpiry: maxTimeToExpiry,
+      minTimeToExpiry: minTimeToExpiry,
+      targetDelta: targetDelta,
+      maxDeltaGap: maxDeltaGap,
+      maxIv: maxIv,
+      minIv: minIv,
+      size: size,
+      minInterval: minInterval
+    });
     //todo: set the round status on vault
     // vault.startWithdrawPeriod
   }
@@ -48,7 +84,7 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
   /**
    * request trade detail according to the strategy.
    */
-  function requestTrade()
+  function requestTrade(uint boardId)
     external
     view
     override
@@ -58,7 +94,8 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
       uint minPremium
     )
   {
-    listingId = _getListing();
+    // todo: check whether minInterval has passed
+    listingId = _getListing(boardId);
     size = _getSize();
     minPremium = _getMinPremium(listingId, size);
   }
@@ -72,10 +109,49 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
 
   /**
    * @dev get the target listing id to trade on.
-   * with delta vault strategy, this will be looping through all potential listings and find the closest iv
+   * with delta vault strategy, this will check whether board is valid and
+   * loop through all listingIds until target delta is found
    */
-  function _getListing() internal pure returns (uint listingId) {
-    listingId = 0;
+  function _getListing(uint boardId) internal view returns (uint listingId) {
+    (uint id, uint expiry, uint boardIV, ) = optionMarket.optionBoards(boardId);
+    uint timeToExpiry = expiry.sub(block.timestamp);
+    require(
+      timeToExpiry < currentStrategy.maxTimeToExpiry && timeToExpiry > currentStrategy.minTimeToExpiry,
+      "Board is outside of expiry bounds"
+    );
+
+    uint[] memory listings = optionMarket.getBoardListings(boardId);
+
+    int deltaGap;
+    uint listingIv;
+    uint currentListingId;
+    uint skew;
+    int callDelta;
+    uint optimalListingId = 0;
+    int optimalDeltaGap = 10**10;
+
+    // need to start from smallest delta, run a test to see if listings are ordered.
+    for (uint i = 0; i < listings.length; i++) {
+      (currentListingId, , skew, , callDelta, , , , , , ) = greekCache.listingCaches(listings[i]);
+      listingIv = boardIV.multiplyDecimal(skew);
+      console.log("Current listing: %s, IV: %i", currentListingId, listingIv);
+
+      // calculate the gap to the target delta
+      deltaGap = abs(callDelta.sub(currentStrategy.targetDelta));
+
+      //
+      if (
+        listingIv < currentStrategy.minIv || listingIv > currentStrategy.maxIv || deltaGap > currentStrategy.maxDeltaGap
+      ) {
+        continue;
+      } else if (deltaGap < optimalDeltaGap) {
+        optimalListingId = currentListingId;
+        optimalDeltaGap = deltaGap;
+      }
+    }
+
+    require(optimalListingId != 0, "Not able to find valid listing");
+    return currentListingId;
   }
 
   /**
@@ -98,5 +174,9 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
     // todo: request blacksholes to get premium without fee
     // todo: apply constant logic to get min premium
     minPremium = 0;
+  }
+
+  function abs(int val) internal pure returns (int) {
+    return val >= 0 ? val : -val;
   }
 }

@@ -6,12 +6,12 @@ import {IOptionMarket} from "./IOptionMarket.sol";
 interface IVaultStrategy {
   function setStrategy(bytes memory strategyBytes) external;
 
-  function requestTrade()
+  function requestTrade(uint boardId)
     external
     view
     returns (
       uint listingId,
-      uint amount,
+      uint size,
       uint minPremium
     );
 

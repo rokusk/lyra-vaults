@@ -66,9 +66,9 @@ contract LyraVault is Ownable, BaseVault {
   }
 
   /// @dev anyone can trigger a trade
-  function trade() external {
+  function trade(uint boardId) external {
     // get trade detail from strategy
-    (uint listingId, uint amount, uint minPremium) = strategy.requestTrade();
+    (uint listingId, uint amount, uint minPremium) = strategy.requestTrade(boardId);
 
     // open a short call position on lyra and collect premium
     uint collateralBefore = IERC20(vaultParams.asset).balanceOf(address(this));

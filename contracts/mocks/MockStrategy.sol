@@ -33,7 +33,7 @@ contract MockStrategy is IVaultStrategy {
   /**
    * request trade detail according to the strategy.
    */
-  function requestTrade()
+  function requestTrade(uint boardId)
     external
     view
     override
