@@ -1,5 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.7.0;
+pragma experimental ABIEncoderV2;
 
 // Hardhat
 import "hardhat/console.sol";
@@ -7,6 +8,7 @@ import "hardhat/console.sol";
 // Interfaces
 import {IVaultStrategy} from "../interfaces/IVaultStrategy.sol";
 import {IBlackScholes} from "../interfaces/IBlackScholes.sol";
+import {ILyraGlobals} from "../interfaces/ILyraGlobals.sol";
 
 import {IOptionMarket} from "../interfaces/IOptionMarket.sol";
 import {IOptionGreekCache} from "../interfaces/IOptionGreekCache.sol";
@@ -26,6 +28,7 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
   IBlackScholes public immutable blackScholes;
   IOptionMarket public immutable optionMarket;
   IOptionGreekCache public immutable greekCache;
+  ILyraGlobals public immutable lyraGlobals;
 
   // example strategy detail
   struct DeltaStrategyDetail {
@@ -45,12 +48,14 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
     address _vault,
     IBlackScholes _blackScholes,
     IOptionMarket _optionMarket,
-    IOptionGreekCache _greekCache
+    IOptionGreekCache _greekCache,
+    ILyraGlobals _lyraGlobals
   ) {
     vault = _vault;
     blackScholes = _blackScholes;
     optionMarket = _optionMarket;
     greekCache = _greekCache;
+    lyraGlobals = _lyraGlobals;
   }
 
   /**
@@ -58,7 +63,7 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
    * @param strategyBytes decoded strategy data
    */
   function setStrategy(bytes memory strategyBytes) external override onlyOwner {
-    //todo: check that the vault is in a state that allow changing strategy
+    //todo: check that the vault is in a state that allows changing strategy
     (
       uint minTimeToExpiry,
       uint maxTimeToExpiry,
@@ -92,14 +97,14 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
     override
     returns (
       uint listingId,
-      uint size,
+      uint amount,
       uint minPremium
     )
   {
     // todo: check whether minInterval has passed
     listingId = _getListing(boardId);
-    size = _getSize();
-    minPremium = _getMinPremium(listingId, size);
+    amount = _getTradeAmount();
+    minPremium = _getMinPremium(listingId);
   }
 
   /**
@@ -116,6 +121,7 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
    */
   function _getListing(uint boardId) internal view returns (uint listingId) {
     //todo: generalize to both calls/puts
+    //todo: need to get accurate spot price
     (uint id, uint expiry, uint boardIV, bool frozen) = optionMarket.optionBoards(boardId);
 
     // Ensure board is within expiry limits
@@ -149,33 +155,47 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
         optimalDeltaGap = deltaGap;
       }
     }
-
-    console.log("Optimal Listing: %s", optimalListingId);
-
     require(optimalListingId != 0, "Not able to find valid listing");
     return optimalListingId;
   }
 
   /**
-   * @dev get the size of trade.
+   * @dev get minimum premium that the vault should receive.
+   * param listingId lyra option listing id
+   * param size size of trade in Lyra standard sizes
+   * @return minPremium the min amount of sUSD the vault should receive
    */
-  function _getSize() internal view returns (uint size) {
-    size = currentStrategy.size;
+  function _getMinPremium(uint listingId) internal view returns (uint minPremium) {
+    // todo: can we use lyraGlobals.skewAdjustmentFactor()?
+    (, uint strike, uint skew, , , , , , , , uint boardId) = greekCache.listingCaches(listingId);
+    (, uint expiry, uint boardIV, ) = optionMarket.optionBoards(boardId);
+    uint timeToExpirySec = expiry.sub(block.timestamp);
+    ILyraGlobals.PricingGlobals memory pricingGlobals = lyraGlobals.getPricingGlobals(address(optionMarket));
+
+    // estimating IV and skew impact from trade
+    uint orderMoveBaseIv = currentStrategy.size / 100;
+    uint baseIvSlip = boardIV.sub(orderMoveBaseIv);
+    uint skewSlip = skew.sub(pricingGlobals.skewAdjustmentFactor.multiplyDecimal(currentStrategy.size));
+    uint impactedIv = baseIvSlip.multiplyDecimal(skewSlip);
+
+    // getting pure black scholes price without Lyra/SNX fees
+    (uint callPremium, uint putPremium) = blackScholes.optionPrices(
+      timeToExpirySec,
+      impactedIv,
+      pricingGlobals.spotPrice, //todo: need to generalize to any asset
+      strike, // todo: need to resolve stack too deep errors
+      pricingGlobals.rateAndCarry
+    );
+
+    minPremium = callPremium; // todo: generalize to calls and puts;
   }
 
   /**
-   * @dev get minimum premium that the vault should receive.
-   * param listingId lyra option listing id
-   * param size size of trade
-   * @return minPremium the min amount of sUSD the vault should receive
+   * @dev convert size (denominated in standard sizes) to actual contract amount.
    */
-  function _getMinPremium(
-    uint, /*listingId*/
-    uint /*size*/
-  ) internal pure returns (uint minPremium) {
-    // todo: request blacksholes to get premium without fee
-    // todo: apply constant logic to get min premium
-    minPremium = 0;
+  function _getTradeAmount() internal view returns (uint amount) {
+    // need to check if lyraGlobals.standardSize can be used instead to save on cost.
+    amount = currentStrategy.size.multiplyDecimal(lyraGlobals.standardSize(address(optionMarket)));
   }
 
   function abs(int val) internal pure returns (int) {
