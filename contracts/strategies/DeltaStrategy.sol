@@ -6,6 +6,8 @@ import "hardhat/console.sol";
 
 // Interfaces
 import {IVaultStrategy} from "../interfaces/IVaultStrategy.sol";
+import {IBlackScholes} from "../interfaces/IBlackScholes.sol";
+
 import {IOptionMarket} from "../interfaces/IOptionMarket.sol";
 import {IOptionGreekCache} from "../interfaces/IOptionGreekCache.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -20,19 +22,19 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
   using SignedSafeMath for int;
   using SignedSafeDecimalMath for int;
 
-  address public immutable blackScholes;
+  address public immutable vault;
+  IBlackScholes public immutable blackScholes;
   IOptionMarket public immutable optionMarket;
   IOptionGreekCache public immutable greekCache;
-  address public immutable vault;
 
   // example strategy detail
   struct DeltaStrategyDetail {
-    uint maxTimeToExpiry;
     uint minTimeToExpiry;
+    uint maxTimeToExpiry;
     int targetDelta;
     int maxDeltaGap;
-    uint maxIv;
     uint minIv;
+    uint maxIv;
     uint size;
     uint minInterval;
   }
@@ -41,7 +43,7 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
 
   constructor(
     address _vault,
-    address _blackScholes,
+    IBlackScholes _blackScholes,
     IOptionMarket _optionMarket,
     IOptionGreekCache _greekCache
   ) {
@@ -58,22 +60,22 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
   function setStrategy(bytes memory strategyBytes) external override onlyOwner {
     //todo: check that the vault is in a state that allow changing strategy
     (
-      uint maxTimeToExpiry,
       uint minTimeToExpiry,
+      uint maxTimeToExpiry,
       int targetDelta,
       int maxDeltaGap,
-      uint maxIv,
       uint minIv,
+      uint maxIv,
       uint size,
       uint minInterval
     ) = abi.decode(strategyBytes, (uint, uint, int, int, uint, uint, uint, uint));
     currentStrategy = DeltaStrategyDetail({
-      maxTimeToExpiry: maxTimeToExpiry,
       minTimeToExpiry: minTimeToExpiry,
+      maxTimeToExpiry: maxTimeToExpiry,
       targetDelta: targetDelta,
       maxDeltaGap: maxDeltaGap,
-      maxIv: maxIv,
       minIv: minIv,
+      maxIv: maxIv,
       size: size,
       minInterval: minInterval
     });
@@ -113,7 +115,10 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
    * loop through all listingIds until target delta is found
    */
   function _getListing(uint boardId) internal view returns (uint listingId) {
-    (uint id, uint expiry, uint boardIV, ) = optionMarket.optionBoards(boardId);
+    //todo: generalize to both calls/puts
+    (uint id, uint expiry, uint boardIV, bool frozen) = optionMarket.optionBoards(boardId);
+
+    // Ensure board is within expiry limits
     uint timeToExpiry = expiry.sub(block.timestamp);
     require(
       timeToExpiry < currentStrategy.maxTimeToExpiry && timeToExpiry > currentStrategy.minTimeToExpiry,
@@ -121,25 +126,20 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
     );
 
     uint[] memory listings = optionMarket.getBoardListings(boardId);
-
     int deltaGap;
     uint listingIv;
     uint currentListingId;
     uint skew;
     int callDelta;
     uint optimalListingId = 0;
-    int optimalDeltaGap = 10**10;
+    int optimalDeltaGap = type(int).max;
 
-    // need to start from smallest delta, run a test to see if listings are ordered.
     for (uint i = 0; i < listings.length; i++) {
       (currentListingId, , skew, , callDelta, , , , , , ) = greekCache.listingCaches(listings[i]);
       listingIv = boardIV.multiplyDecimal(skew);
-      console.log("Current listing: %s, IV: %i", currentListingId, listingIv);
 
-      // calculate the gap to the target delta
       deltaGap = abs(callDelta.sub(currentStrategy.targetDelta));
 
-      //
       if (
         listingIv < currentStrategy.minIv || listingIv > currentStrategy.maxIv || deltaGap > currentStrategy.maxDeltaGap
       ) {
@@ -150,8 +150,10 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
       }
     }
 
+    console.log("Optimal Listing: %s", optimalListingId);
+
     require(optimalListingId != 0, "Not able to find valid listing");
-    return currentListingId;
+    return optimalListingId;
   }
 
   /**
