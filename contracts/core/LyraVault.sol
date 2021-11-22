@@ -93,7 +93,7 @@ contract LyraVault is Ownable, BaseVault {
   /// @param listingIds an array of listingId that the vault traded with in the last round.
   function settle(uint[] memory listingIds) external {
     // eth call options are settled in eth
-    for(uint i = 0; i < listingIds.length; i++) {
+    for (uint i = 0; i < listingIds.length; i++) {
       optionMarket.settleOptions(listingIds[i], IOptionMarket.TradeType.SHORT_CALL);
     }
   }

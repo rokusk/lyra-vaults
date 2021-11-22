@@ -45,7 +45,7 @@ library Vault {
     // Amount locked for scheduled withdrawals;
     uint128 queuedWithdrawShares;
     // The timestamp next round will be ready to start
-    uint256 nextRoundReadyTimestamp;
+    uint nextRoundReadyTimestamp;
   }
 
   struct DepositReceipt {
