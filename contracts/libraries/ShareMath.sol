@@ -7,8 +7,6 @@ import {Vault} from "./Vault.sol";
 library ShareMath {
   using SafeMath for uint;
 
-  uint internal constant PLACEHOLDER_UINT = 1;
-
   function assetToShares(
     uint assetAmount,
     uint assetPerShare,
@@ -16,8 +14,7 @@ library ShareMath {
   ) internal pure returns (uint) {
     // If this throws, it means that vault's roundPricePerShare[currentRound] has not been set yet
     // which should never happen.
-    // Has to be larger than 1 because `1` is used in `initRoundPricePerShares` to prevent cold writes.
-    require(assetPerShare > PLACEHOLDER_UINT, "Invalid assetPerShare");
+    require(assetPerShare > 0, "Invalid assetPerShare");
 
     return assetAmount.mul(10**decimals).div(assetPerShare);
   }
@@ -29,8 +26,7 @@ library ShareMath {
   ) internal pure returns (uint) {
     // If this throws, it means that vault's roundPricePerShare[currentRound] has not been set yet
     // which should never happen.
-    // Has to be larger than 1 because `1` is used in `initRoundPricePerShares` to prevent cold writes.
-    require(assetPerShare > PLACEHOLDER_UINT, "Invalid assetPerShare");
+    require(assetPerShare > 0, "Invalid assetPerShare");
 
     return shares.mul(assetPerShare).div(10**decimals);
   }

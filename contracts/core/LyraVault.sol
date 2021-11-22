@@ -98,11 +98,12 @@ contract LyraVault is Ownable, BaseVault {
     }
   }
 
-  /// @dev close the next round, enable user to deposit
+  /// @dev close the current round, enable user to deposit for the next round
   function closeRound() external onlyOwner {
     vaultState.lastLockedAmount = vaultState.lockedAmount;
     vaultState.lockedAmountLeft = 0;
     vaultState.lockedAmount = 0;
+    vaultState.roundReady = now.add(DELAY);
   }
 
   /// @notice start the next round

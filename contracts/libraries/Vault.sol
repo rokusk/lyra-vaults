@@ -18,9 +18,6 @@ library Vault {
   // Percentage of funds allocated to options is 2 decimal places. 10 * 10**2 = 10%
   uint internal constant OPTION_ALLOCATION_MULTIPLIER = 10**2;
 
-  // Placeholder uint value to prevent cold writes
-  uint internal constant PLACEHOLDER_UINT = 1;
-
   struct VaultParams {
     // Token decimals for vault shares
     uint8 decimals;
@@ -47,6 +44,8 @@ library Vault {
     uint128 totalPending;
     // Amount locked for scheduled withdrawals;
     uint128 queuedWithdrawShares;
+    // The timestamp next round will be ready to start
+    uint256 nextRoundReadyTimestamp;
   }
 
   struct DepositReceipt {
