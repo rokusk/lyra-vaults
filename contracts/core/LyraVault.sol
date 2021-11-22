@@ -67,6 +67,7 @@ contract LyraVault is Ownable, BaseVault {
 
   /// @dev anyone can trigger a trade
   function trade() external {
+    require(vaultState.roundInProgress, "round closed");
     // get trade detail from strategy
     (uint listingId, uint amount, uint minPremium) = strategy.requestTrade();
 
@@ -104,16 +105,19 @@ contract LyraVault is Ownable, BaseVault {
     vaultState.lockedAmountLeft = 0;
     vaultState.lockedAmount = 0;
     vaultState.nextRoundReadyTimestamp = block.timestamp.add(Vault.ROUND_DELAY);
+    vaultState.roundInProgress = false;
   }
 
   /// @notice start the next round
   function startNextRound() external {
+    require(!vaultState.roundInProgress, "round opened");
     require(block.timestamp > vaultState.nextRoundReadyTimestamp, "CD");
 
     (uint lockedBalance, uint queuedWithdrawAmount) = _rollToNextRound(uint(lastQueuedWithdrawAmount));
 
     vaultState.lockedAmount = uint104(lockedBalance);
     vaultState.lockedAmountLeft = lockedBalance;
+    vaultState.roundInProgress = true;
     lastQueuedWithdrawAmount = uint128(queuedWithdrawAmount);
   }
 }

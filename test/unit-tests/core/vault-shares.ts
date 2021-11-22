@@ -192,7 +192,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
         // set mocked asset only
         await mockedMarket.setMockCollateral(seth.address, parseEther('1'))
         await mockedMarket.setMockPremium(susd.address, 0)
-        await expect(vault.trade()).to.be.revertedWith('SafeMath: subtraction overflow')
+        await expect(vault.trade()).to.be.revertedWith('round closed')
       })
     });
   })

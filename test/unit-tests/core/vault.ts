@@ -205,7 +205,7 @@ describe('Unit test: Basic LyraVault flow', async () => {
       await mockedMarket.setMockCollateral(seth.address, parseEther('1'))
       await mockedMarket.setMockPremium(susd.address, 0)
 
-      await expect(vault.trade()).to.be.revertedWith('SafeMath: subtraction overflow')
+      await expect(vault.trade()).to.be.revertedWith('round closed')
     })
   });
 
@@ -288,9 +288,17 @@ describe('Unit test: Basic LyraVault flow', async () => {
       await ethers.provider.send("evm_increaseTime", [86400*7])
       await ethers.provider.send("evm_mine", [])
     })
+
+    it('should revert if trying to start the next round without closing the round', async() => {
+      await expect(vault.startNextRound()).to.be.revertedWith("round opened")
+    })
     
     it('should close the current round', async() => {
       await vault.closeRound()
+    })
+
+    it('should revert if trying to trade right now', async() => {
+      await expect(vault.trade()).to.be.revertedWith('round closed')
     })
 
     it('should revert if trying to start the next round within 24 hours from close', async() => {

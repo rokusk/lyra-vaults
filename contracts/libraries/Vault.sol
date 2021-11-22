@@ -48,6 +48,8 @@ library Vault {
     uint128 queuedWithdrawShares;
     // The timestamp next round will be ready to start
     uint nextRoundReadyTimestamp;
+    // true if the current round is in progress, false if the round is idle
+    bool roundInProgress;
   }
 
   struct DepositReceipt {
