@@ -90,20 +90,24 @@ contract LyraVault is Ownable, BaseVault {
 
   /// @notice settle outstanding short positions.
   /// @dev anyone can call the function to settle outstanding expired positions
-  function settle(uint listingId) external {
+  /// @param listingIds an array of listingId that the vault traded with in the last round.
+  function settle(uint[] memory listingIds) external {
     // eth call options are settled in eth
-    optionMarket.settleOptions(listingId, IOptionMarket.TradeType.SHORT_CALL);
+    for(uint i = 0; i < listingIds.length; i++) {
+      optionMarket.settleOptions(listingIds[i], IOptionMarket.TradeType.SHORT_CALL);
+    }
   }
 
+  /// @dev close the next round, enable user to deposit
   function closeRound() external onlyOwner {
     vaultState.lastLockedAmount = vaultState.lockedAmount;
     vaultState.lockedAmountLeft = 0;
     vaultState.lockedAmount = 0;
   }
 
-  /// @notice roll to next round
-  function rollToNextRound() external {
-    // todo: cannot roll over anytime. This should be done after settlement
+  /// @notice start the next round
+  function startNextRound() external {
+    // todo: cannot roll over anytime. This should be certain time after close round
 
     (uint lockedBalance, uint queuedWithdrawAmount) = _rollToNextRound(uint(lastQueuedWithdrawAmount));
 

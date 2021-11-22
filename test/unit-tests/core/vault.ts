@@ -216,7 +216,7 @@ describe('Unit test: Basic LyraVault flow', async () => {
     })
     it('should be able to rollover the position', async() => {
       const roundBefore = await vault.vaultState()
-      await vault.connect(owner).rollToNextRound()
+      await vault.connect(owner).startNextRound()
       const roundAfter = await vault.vaultState()
       expect(roundBefore.round).to.be.eq(1)
       expect(roundAfter.round).to.be.eq(2)
@@ -273,7 +273,7 @@ describe('Unit test: Basic LyraVault flow', async () => {
     it('should settle a specific listing and get back collateral (seth)', async() => {
       const vaultBalanceBefore = await seth.balanceOf(vault.address)
       const listingId = 0
-      await vault.settle(listingId)
+      await vault.settle([listingId])
       const vaultBalanceAfter = await seth.balanceOf(vault.address)
       expect(vaultBalanceAfter.sub(vaultBalanceBefore)).to.be.eq(settlementPayout)
     })
@@ -289,7 +289,7 @@ describe('Unit test: Basic LyraVault flow', async () => {
       const recipientBalanceBefore = await seth.balanceOf(feeRecipient.address)
 
       await vault.closeRound()
-      await vault.rollToNextRound()
+      await vault.startNextRound()
 
       const vaultStateAfter = await vault.vaultState()
 
