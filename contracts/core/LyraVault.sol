@@ -103,12 +103,12 @@ contract LyraVault is Ownable, BaseVault {
     vaultState.lastLockedAmount = vaultState.lockedAmount;
     vaultState.lockedAmountLeft = 0;
     vaultState.lockedAmount = 0;
-    vaultState.roundReady = now.add(DELAY);
+    vaultState.nextRoundReadyTimestamp = block.timestamp.add(Vault.ROUND_DELAY);
   }
 
   /// @notice start the next round
   function startNextRound() external {
-    // todo: cannot roll over anytime. This should be certain time after close round
+    require(block.timestamp > vaultState.nextRoundReadyTimestamp, "CD");
 
     (uint lockedBalance, uint queuedWithdrawAmount) = _rollToNextRound(uint(lastQueuedWithdrawAmount));
 

@@ -215,6 +215,10 @@ describe('Unit test: Basic LyraVault flow', async () => {
       await vault.connect(owner).closeRound()
     })
     it('should be able to rollover the position', async() => {
+      
+      await ethers.provider.send("evm_increaseTime", [86400])
+      await ethers.provider.send("evm_mine", [])
+      
       const roundBefore = await vault.vaultState()
       await vault.connect(owner).startNextRound()
       const roundAfter = await vault.vaultState()
@@ -284,11 +288,22 @@ describe('Unit test: Basic LyraVault flow', async () => {
       await ethers.provider.send("evm_increaseTime", [86400*7])
       await ethers.provider.send("evm_mine", [])
     })
-    it('should rollover the vault to the next round, and pay the fee recpient fees', async() => {
+    
+    it('should close the current round', async() => {
+      await vault.closeRound()
+    })
+
+    it('should revert if trying to start the next round within 24 hours from close', async() => {
+      await expect(vault.startNextRound()).to.be.revertedWith("CD")
+    })
+
+    it('should roll into the next round and pay the fee recpient fees', async() => {
+      await ethers.provider.send("evm_increaseTime", [86400])
+      await ethers.provider.send("evm_mine", [])
+      
       const vaultStateBefore = await vault.vaultState()
       const recipientBalanceBefore = await seth.balanceOf(feeRecipient.address)
 
-      await vault.closeRound()
       await vault.startNextRound()
 
       const vaultStateAfter = await vault.vaultState()

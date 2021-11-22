@@ -202,6 +202,10 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
       it('should be able to close the previous round', async() => {
         await vault.connect(owner).closeRound()
       })
+      it('stimulate time pass', async() => {
+        await ethers.provider.send("evm_increaseTime", [86400])
+        await ethers.provider.send("evm_mine", [])
+      })
       it('should be able to rollover the position', async() => {
         const roundBefore = await vault.vaultState()
         await vault.connect(owner).startNextRound()
@@ -336,6 +340,10 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
 
   describe('round 3: vault lose money', async() => {
     before('rollover to round 3', async() => {
+      
+      await ethers.provider.send("evm_increaseTime", [86400])
+      await ethers.provider.send("evm_mine", [])
+    
       await vault.connect(owner).startNextRound()
       const {round} = await vault.vaultState()
       expect(round).to.be.eq(3)
@@ -416,6 +424,10 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
 
   describe('round 4', async() => {
     before('rollover to round 4', async() => {
+
+      await ethers.provider.send("evm_increaseTime", [86400])
+      await ethers.provider.send("evm_mine", [])
+    
       await vault.connect(owner).startNextRound()
     })
     it('should revert when trying to complete the withdraw, because the collateral is 0', async() => {

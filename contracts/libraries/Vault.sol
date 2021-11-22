@@ -18,6 +18,8 @@ library Vault {
   // Percentage of funds allocated to options is 2 decimal places. 10 * 10**2 = 10%
   uint internal constant OPTION_ALLOCATION_MULTIPLIER = 10**2;
 
+  uint internal constant ROUND_DELAY = 1 days;
+
   struct VaultParams {
     // Token decimals for vault shares
     uint8 decimals;
