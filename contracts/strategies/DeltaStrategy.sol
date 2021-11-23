@@ -168,15 +168,11 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
   function _getMinPremium(uint listingId) internal view returns (uint minPremium) {
     // todo: can we use lyraGlobals.skewAdjustmentFactor()?
     (, uint strike, uint skew, , , , , , , , uint boardId) = greekCache.listingCaches(listingId);
-    (, uint expiry, uint boardIV, ) = optionMarket.optionBoards(boardId);
+    (, uint expiry, uint boardIv, ) = optionMarket.optionBoards(boardId);
     uint timeToExpirySec = expiry.sub(block.timestamp);
     ILyraGlobals.PricingGlobals memory pricingGlobals = lyraGlobals.getPricingGlobals(address(optionMarket));
 
-    // estimating IV and skew impact from trade
-    uint orderMoveBaseIv = currentStrategy.size / 100;
-    uint baseIvSlip = boardIV.sub(orderMoveBaseIv);
-    uint skewSlip = skew.sub(pricingGlobals.skewAdjustmentFactor.multiplyDecimal(currentStrategy.size));
-    uint impactedIv = baseIvSlip.multiplyDecimal(skewSlip);
+    uint impactedIv = _getImpactedIv(boardIv, skew, pricingGlobals.skewAdjustmentFactor);
 
     // getting pure black scholes price without Lyra/SNX fees
     (uint callPremium, uint putPremium) = blackScholes.optionPrices(
@@ -188,6 +184,17 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
     );
 
     minPremium = callPremium; // todo: generalize to calls and puts;
+  }
+
+  function _getImpactedIv(
+    uint boardIv,
+    uint skew,
+    uint skewAdjustmentFactor
+  ) internal view returns (uint impactedIv) {
+    uint orderMoveBaseIv = currentStrategy.size / 100;
+    uint baseIvSlip = boardIv.sub(orderMoveBaseIv);
+    uint skewSlip = skew.sub(skewAdjustmentFactor.multiplyDecimal(currentStrategy.size));
+    impactedIv = baseIvSlip.multiplyDecimal(skewSlip);
   }
 
   /**
