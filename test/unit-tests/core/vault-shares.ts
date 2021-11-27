@@ -25,6 +25,8 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
   let depositor: SignerWithAddress
   let shrimp: SignerWithAddress // user with dust deposit
 
+  const roundDuration = 7 * 86400
+
   // fix deposit amount at 1 eth
   const depositAmount = parseEther('1')
 
@@ -73,6 +75,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
       susd.address,
       owner.address, // feeRecipient,
       mockedSynthetix.address,
+      roundDuration,
       "LyraVault Share",
       "Lyra VS",
       {
@@ -313,7 +316,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
       // assume option expires OTM, settlement will return the origianl collateral amount
       const settlementPayout = parseEther('1')
       before('simulate time pass', async() => {
-        await ethers.provider.send("evm_increaseTime", [86400*7])
+        await ethers.provider.send("evm_increaseTime", [roundDuration])
         await ethers.provider.send("evm_mine", [])
       })
       before('set mock settle data', async() => {
@@ -400,7 +403,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
       // assume option expires ITM, only get 40% of the collateral out!
       const settlementPayout = parseEther('0.4')
       before('simulate time pass', async() => {
-        await ethers.provider.send("evm_increaseTime", [86400*7])
+        await ethers.provider.send("evm_increaseTime", [roundDuration])
         await ethers.provider.send("evm_mine", [])
       })
       before('set mock settle data', async() => {

@@ -63,9 +63,8 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    *  IMMUTABLES & CONSTANTS
    ***********************************************/
 
-  // Number of weeks per year = 52.142857 weeks * FEE_MULTIPLIER = 52142857
-  // Dividing by weeks per year requires doing num.mul(FEE_MULTIPLIER).div(WEEKS_PER_YEAR)
-  uint private constant WEEKS_PER_YEAR = 52142857;
+  // Round per year scaled up FEE_MULTIPLIER
+  uint private immutable roundPerYear;
 
   /************************************************
    *  EVENTS
@@ -96,15 +95,14 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    */
   constructor(
     address _feeRecipient,
-    uint _managementFee,
-    uint _performanceFee,
+    uint _roundDuration,
     string memory _tokenName,
     string memory _tokenSymbol,
     Vault.VaultParams memory _vaultParams
   ) ERC20(_tokenName, _tokenSymbol) {
     feeRecipient = _feeRecipient;
-    performanceFee = _performanceFee;
-    managementFee = _managementFee.mul(Vault.FEE_MULTIPLIER).div(WEEKS_PER_YEAR);
+    uint _roundPerYear = uint256(365 days).mul(Vault.FEE_MULTIPLIER).div(_roundDuration);
+    roundPerYear = _roundPerYear;
     vaultParams = _vaultParams;
 
     uint assetBalance = IERC20(vaultParams.asset).balanceOf(address(this));
@@ -136,8 +134,8 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
 
     emit ManagementFeeSet(managementFee, newManagementFee);
 
-    // We are dividing annualized management fee by num weeks in a year
-    managementFee = newManagementFee.mul(Vault.FEE_MULTIPLIER).div(WEEKS_PER_YEAR);
+    // We are dividing annualized management fee by number of rounds in a year
+    managementFee = newManagementFee.mul(Vault.FEE_MULTIPLIER).div(roundPerYear);
   }
 
   /**
