@@ -205,7 +205,7 @@ describe('Unit test: Basic LyraVault flow', async () => {
       await mockedMarket.setMockCollateral(seth.address, parseEther('1'))
       await mockedMarket.setMockPremium(susd.address, 0)
 
-      await expect(vault.trade()).to.be.revertedWith('SafeMath: subtraction overflow')
+      await expect(vault.trade()).to.be.revertedWith('round closed')
     })
   });
 
@@ -215,8 +215,12 @@ describe('Unit test: Basic LyraVault flow', async () => {
       await vault.connect(owner).closeRound()
     })
     it('should be able to rollover the position', async() => {
+      
+      await ethers.provider.send("evm_increaseTime", [86400])
+      await ethers.provider.send("evm_mine", [])
+      
       const roundBefore = await vault.vaultState()
-      await vault.connect(owner).rollToNextRound()
+      await vault.connect(owner).startNextRound()
       const roundAfter = await vault.vaultState()
       expect(roundBefore.round).to.be.eq(1)
       expect(roundAfter.round).to.be.eq(2)
@@ -273,7 +277,7 @@ describe('Unit test: Basic LyraVault flow', async () => {
     it('should settle a specific listing and get back collateral (seth)', async() => {
       const vaultBalanceBefore = await seth.balanceOf(vault.address)
       const listingId = 0
-      await vault.settle(listingId)
+      await vault.settle([listingId])
       const vaultBalanceAfter = await seth.balanceOf(vault.address)
       expect(vaultBalanceAfter.sub(vaultBalanceBefore)).to.be.eq(settlementPayout)
     })
@@ -284,12 +288,31 @@ describe('Unit test: Basic LyraVault flow', async () => {
       await ethers.provider.send("evm_increaseTime", [86400*7])
       await ethers.provider.send("evm_mine", [])
     })
-    it('should rollover the vault to the next round, and pay the fee recpient fees', async() => {
+
+    it('should revert if trying to start the next round without closing the round', async() => {
+      await expect(vault.startNextRound()).to.be.revertedWith("round opened")
+    })
+    
+    it('should close the current round', async() => {
+      await vault.closeRound()
+    })
+
+    it('should revert if trying to trade right now', async() => {
+      await expect(vault.trade()).to.be.revertedWith('round closed')
+    })
+
+    it('should revert if trying to start the next round within 24 hours from close', async() => {
+      await expect(vault.startNextRound()).to.be.revertedWith("CD")
+    })
+
+    it('should roll into the next round and pay the fee recpient fees', async() => {
+      await ethers.provider.send("evm_increaseTime", [86400])
+      await ethers.provider.send("evm_mine", [])
+      
       const vaultStateBefore = await vault.vaultState()
       const recipientBalanceBefore = await seth.balanceOf(feeRecipient.address)
 
-      await vault.closeRound()
-      await vault.rollToNextRound()
+      await vault.startNextRound()
 
       const vaultStateAfter = await vault.vaultState()
 

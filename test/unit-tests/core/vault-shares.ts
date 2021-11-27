@@ -192,7 +192,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
         // set mocked asset only
         await mockedMarket.setMockCollateral(seth.address, parseEther('1'))
         await mockedMarket.setMockPremium(susd.address, 0)
-        await expect(vault.trade()).to.be.revertedWith('SafeMath: subtraction overflow')
+        await expect(vault.trade()).to.be.revertedWith('round closed')
       })
     });
   })
@@ -202,9 +202,13 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
       it('should be able to close the previous round', async() => {
         await vault.connect(owner).closeRound()
       })
+      it('stimulate time pass', async() => {
+        await ethers.provider.send("evm_increaseTime", [86400])
+        await ethers.provider.send("evm_mine", [])
+      })
       it('should be able to rollover the position', async() => {
         const roundBefore = await vault.vaultState()
-        await vault.connect(owner).rollToNextRound()
+        await vault.connect(owner).startNextRound()
         const roundAfter = await vault.vaultState()
         expect(roundBefore.round).to.be.eq(1)
         expect(roundAfter.round).to.be.eq(2)
@@ -321,7 +325,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
       it('should settle a specific listing and get back collateral (seth)', async() => {
         const vaultBalanceBefore = await seth.balanceOf(vault.address)
         const listingId = 0
-        await vault.settle(listingId)
+        await vault.settle([listingId])
         const vaultBalanceAfter = await seth.balanceOf(vault.address)
         expect(vaultBalanceAfter.sub(vaultBalanceBefore)).to.be.eq(settlementPayout)
       })
@@ -336,7 +340,11 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
 
   describe('round 3: vault lose money', async() => {
     before('rollover to round 3', async() => {
-      await vault.connect(owner).rollToNextRound()
+      
+      await ethers.provider.send("evm_increaseTime", [86400])
+      await ethers.provider.send("evm_mine", [])
+    
+      await vault.connect(owner).startNextRound()
       const {round} = await vault.vaultState()
       expect(round).to.be.eq(3)
     })
@@ -404,7 +412,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
       it('should settle a specific listing and get back collateral (seth)', async() => {
         const vaultBalanceBefore = await seth.balanceOf(vault.address)
         const listingId = 0
-        await vault.settle(listingId)
+        await vault.settle([listingId])
         const vaultBalanceAfter = await seth.balanceOf(vault.address)
         expect(vaultBalanceAfter.sub(vaultBalanceBefore)).to.be.eq(settlementPayout)
       })
@@ -416,7 +424,11 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
 
   describe('round 4', async() => {
     before('rollover to round 4', async() => {
-      await vault.connect(owner).rollToNextRound()
+
+      await ethers.provider.send("evm_increaseTime", [86400])
+      await ethers.provider.send("evm_mine", [])
+    
+      await vault.connect(owner).startNextRound()
     })
     it('should revert when trying to complete the withdraw, because the collateral is 0', async() => {
       await expect(vault.connect(shrimp).completeWithdraw()).to.be.revertedWith('!withdrawAmount')

@@ -12,12 +12,12 @@ describe('Unit test: ShareMath Library', async () => {
 
   describe('#assetToShares', async() => {
     it('shoudl revert if share price is 0', async() => {
-      await expect(tester.assetToShares(0, 1, 0)).to.be.revertedWith('Invalid assetPerShare')
+      await expect(tester.assetToShares(0, 0, 0)).to.be.revertedWith('Invalid assetPerShare')
     })
   })
   describe('#sharesToAsset', async() => {
     it('shoudl revert if share price is 0', async() => {
-      await expect(tester.sharesToAsset(0, 1, 0)).to.be.revertedWith('Invalid assetPerShare')
+      await expect(tester.sharesToAsset(0, 0, 0)).to.be.revertedWith('Invalid assetPerShare')
     })
   })
   

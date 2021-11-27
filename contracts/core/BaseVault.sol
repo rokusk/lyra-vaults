@@ -375,24 +375,6 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    ***********************************************/
 
   /*
-   * @notice Helper function that helps to save gas for writing values into the roundPricePerShare map.
-   *         Writing `1` into the map makes subsequent writes warm, reducing the gas from 20k to 5k.
-   *         Having 1 initialized beforehand will not be an issue as long as we round down share calculations to 0.
-   * @param numRounds is the number of rounds to initialize in the map
-   */
-  // function initRounds(uint numRounds) external nonReentrant {
-  //   require(numRounds > 0, "!numRounds");
-
-  //   uint _round = vaultState.round;
-  //   for (uint i = 0; i < numRounds; i++) {
-  //     uint index = _round + i;
-  //     require(index >= _round, "Overflow");
-  //     require(roundPricePerShare[index] == 0, "Initialized"); // AVOID OVERWRITING ACTUAL VALUES
-  //     roundPricePerShare[index] = ShareMath.PLACEHOLDER_UINT;
-  //   }
-  // }
-
-  /*
    * @notice Helper function that performs most administrative tasks
    * such as setting next option, minting new shares, getting vault fees, etc.
    * @param lastQueuedWithdrawAmount is old queued withdraw amount
@@ -493,7 +475,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
   function shareBalances(address account) public view returns (uint heldByAccount, uint heldByVault) {
     Vault.DepositReceipt memory depositReceipt = depositReceipts[account];
 
-    if (depositReceipt.round < ShareMath.PLACEHOLDER_UINT) {
+    if (depositReceipt.round == 0) {
       return (balanceOf(account), 0);
     }
 
