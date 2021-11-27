@@ -101,7 +101,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
     Vault.VaultParams memory _vaultParams
   ) ERC20(_tokenName, _tokenSymbol) {
     feeRecipient = _feeRecipient;
-    uint _roundPerYear = uint256(365 days).mul(Vault.FEE_MULTIPLIER).div(_roundDuration);
+    uint _roundPerYear = uint(365 days).mul(Vault.FEE_MULTIPLIER).div(_roundDuration);
     roundPerYear = _roundPerYear;
     vaultParams = _vaultParams;
 

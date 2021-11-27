@@ -7,8 +7,6 @@ import { FEE_MULTIPLIER } from '../utils/constants';
 import { BigNumber } from 'ethers'
 import { toBytes32 } from '../utils/synthetixUtils';
 
-const roundDuration = 86400 * 7
-
 describe('Unit test: Basic LyraVault flow', async () => {
   // contract instances
   let vault: LyraVault;

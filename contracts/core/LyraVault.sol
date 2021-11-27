@@ -48,7 +48,7 @@ contract LyraVault is Ownable, BaseVault {
     Vault.VaultParams memory _vaultParams,
     bytes32 _premiumCurrencyKey,
     bytes32 _sETHCurrencyKey
-  ) BaseVault(_feeRecipient,_roundDuration, _tokenName, _tokenSymbol, _vaultParams) {
+  ) BaseVault(_feeRecipient, _roundDuration, _tokenName, _tokenSymbol, _vaultParams) {
     optionMarket = IOptionMarket(_optionMarket);
     synthetix = ISynthetix(_synthetix);
     IERC20(_vaultParams.asset).approve(_optionMarket, uint(-1));
