@@ -8,6 +8,8 @@ import 'hardhat-gas-reporter';
 import 'hardhat-typechain';
 import 'solidity-coverage';
 
+import './tasks/deploy-vault'
+
 dotenv.config();
 
 const mnemonic = fs.existsSync('.secret')
@@ -38,7 +40,9 @@ export default {
     },
     'kovan-ovm': {
       url: 'https://kovan.optimism.io',
+      // gasLimit: 60000000,
       ovm: true,
+      accounts: { mnemonic },
     },
   },
   solidity: {

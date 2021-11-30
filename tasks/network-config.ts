@@ -1,0 +1,22 @@
+import { ethers } from "ethers";
+
+export enum Networks {
+    KOVAN_OVM = 'kovan-ovm',
+}
+
+export const lyraOptionMarket: {[key in Networks]: string} = {
+    [Networks.KOVAN_OVM]: "0xb43285B5aF7cad80409e1267Ea21ECB44eEF4a0E"
+}
+
+export const sUSDAddress: {[key in Networks]: string} = {
+    [Networks.KOVAN_OVM]: '0x84B6b512E8F416981a27d33E210A1886e29791aB'
+}
+
+export const sETHAddress: {[key in Networks]: string} = {
+    [Networks.KOVAN_OVM]: '0x2818E5083696E6EB78613b40c0f18Eb47bE55701'
+}
+
+// from https://docs.synthetix.io/addresses/
+export const synthetixAddress: {[key in Networks]: string} = {
+    [Networks.KOVAN_OVM]: '0x15e7Aa4Cd2C74750b5DCaC9B8B21B9189552BBaD'
+}
