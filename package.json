@@ -14,8 +14,6 @@
     "test": "hardhat test",
     "coverage": "npx hardhat coverage",
     "deploy:wait": "wait-port 8545 && wait-port 9545 && yarn deployAndSeed",
-    "deployTest": "hardhat run scripts/deployTest.ts",
-    "seedTest": "hardhat run scripts/seedTest.ts",
     "docify": "node docify.js",
     "docgen": "yarn doc:uml && yarn docify",
     "lint": "yarn run lint:sol && yarn run lint:ts",

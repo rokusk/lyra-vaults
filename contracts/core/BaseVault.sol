@@ -4,7 +4,6 @@ pragma abicoder v2;
 
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -13,11 +12,12 @@ import {Initializable} from "@openzeppelin/contracts/proxy/Initializable.sol";
 import {Vault} from "../libraries/Vault.sol";
 import {VaultLifecycle} from "../libraries/VaultLifecycle.sol";
 import {ShareMath} from "../libraries/ShareMath.sol";
+import {OVM_SafeERC20} from "../packages/OVM_SafeERC20.sol";
 
 import "hardhat/console.sol";
 
 contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
-  using SafeERC20 for IERC20;
+  using OVM_SafeERC20 for IERC20;
   using SafeMath for uint;
   using ShareMath for Vault.DepositReceipt;
 

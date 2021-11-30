@@ -13,3 +13,5 @@ typechain
 coverage
 coverage.json
 
+artifacts-ovm
+cache-ovm

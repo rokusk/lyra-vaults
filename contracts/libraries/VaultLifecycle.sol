@@ -8,7 +8,7 @@ import {Vault} from "./Vault.sol";
 import {ShareMath} from "./ShareMath.sol";
 
 import {IERC20Detailed} from "../interfaces/IERC20Detailed.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import {OVM_SafeERC20} from "../packages/OVM_SafeERC20.sol";
 
 import "hardhat/console.sol";
 
@@ -17,7 +17,7 @@ import "hardhat/console.sol";
  */
 library VaultLifecycle {
   using SafeMath for uint;
-  using SafeERC20 for IERC20;
+  using OVM_SafeERC20 for IERC20;
 
   /**
    * @notice Calculate the shares to mint, new price per share,
