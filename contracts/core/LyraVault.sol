@@ -3,6 +3,7 @@ pragma solidity ^0.7.0;
 pragma abicoder v2;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/Initializable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
@@ -15,7 +16,7 @@ import {Vault} from "../libraries/Vault.sol";
 import "hardhat/console.sol";
 
 /// @notice LyraVault help users run option-selling strategies on Lyra AMM.
-contract LyraVault is Ownable, BaseVault {
+contract LyraVault is Ownable, Initializable, BaseVault {
   using SafeMath for uint;
 
   IOptionMarket public immutable optionMarket;
@@ -35,11 +36,10 @@ contract LyraVault is Ownable, BaseVault {
   /// @dev Synthetix currency key for sETH
   bytes32 private immutable sETHCurrencyKey;
 
-  event StrategyUpdated(address strategy);
+  // event StrategyUpdated(address strategy);
 
   constructor(
     address _optionMarket,
-    address _susd,
     address _feeRecipient,
     address _synthetix,
     uint _roundDuration,
@@ -51,19 +51,17 @@ contract LyraVault is Ownable, BaseVault {
   ) BaseVault(_feeRecipient, _roundDuration, _tokenName, _tokenSymbol, _vaultParams) {
     optionMarket = IOptionMarket(_optionMarket);
     synthetix = ISynthetix(_synthetix);
-    IERC20(_vaultParams.asset).approve(_optionMarket, uint(-1));
-
     premiumCurrencyKey = _premiumCurrencyKey;
-    sETHCurrencyKey = _sETHCurrencyKey;
-
-    // allow synthetix to trade sUSD for sETH
-    IERC20(_susd).approve(_synthetix, uint(-1));
+    sETHCurrencyKey = _sETHCurrencyKey; 
   }
 
-  /// @dev set strategy contract. This function can only be called by owner.
-  function setStrategy(address _strategy) external onlyOwner {
+  /// @dev init vault
+  function initVault(address _strategy, address _susd) external onlyOwner initializer {
     strategy = IVaultStrategy(_strategy);
-    emit StrategyUpdated(_strategy);
+    
+    // allow synthetix to trade sUSD for sETH
+    IERC20(_susd).approve(address(synthetix), uint(-1));
+    IERC20(vaultParams.asset).approve(address(optionMarket), uint(-1));
   }
 
   /// @dev anyone can trigger a trade

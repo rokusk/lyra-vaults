@@ -115,7 +115,7 @@ describe('Unit test: Basic LyraVault flow', async () => {
 
   describe('owner settings', async() => {
     it('shoud revert when setting cap as 0', async() => {
-      await expect(vault.connect(owner).setCap(0)).to.be.revertedWith('!newCap')
+      await expect(vault.connect(owner).setCap(0)).to.be.revertedWith('IC')
     })
     it('owner should be able to set a new cap', async() => {
       await vault.connect(owner).setCap(initCap)
@@ -131,7 +131,7 @@ describe('Unit test: Basic LyraVault flow', async () => {
       expect(weeklyFee).to.be.eq(fee);
     })
     it('should revert when trying to set a mangement fee that\'s too high', async() => {
-      await expect(vault.connect(owner).setManagementFee(100*FEE_MULTIPLIER)).to.be.revertedWith('Invalid management fee')
+      await expect(vault.connect(owner).setManagementFee(100*FEE_MULTIPLIER)).to.be.revertedWith('IM')
     })
     it('owner should be able to set a new performance fee', async() => {
       await vault.connect(owner).setPerformanceFee(performanceFee)
@@ -141,10 +141,10 @@ describe('Unit test: Basic LyraVault flow', async () => {
       
     })
     it('should revert when trying to set a performance fee that\'s too high', async() => {
-      await expect(vault.connect(owner).setPerformanceFee(100*FEE_MULTIPLIER)).to.be.revertedWith('Invalid performance fee')
+      await expect(vault.connect(owner).setPerformanceFee(100*FEE_MULTIPLIER)).to.be.revertedWith('IP')
     })
     it('should revert when trying to set a invalid feeRecipient high', async() => {
-      await expect(vault.connect(owner).setFeeRecipient(ethers.constants.AddressZero)).to.be.revertedWith('!newFeeRecipient')
+      await expect(vault.connect(owner).setFeeRecipient(ethers.constants.AddressZero)).to.be.revertedWith('IA')
     })
     it('owner should be able to set a new fee recipient address', async() => {
       await vault.connect(owner).setFeeRecipient(feeRecipient.address)
@@ -152,7 +152,7 @@ describe('Unit test: Basic LyraVault flow', async () => {
       expect(recipient).to.be.eq(feeRecipient.address);
     })
     it('should revert if trying to set the same feeRecipient as the existing one', async() => {
-      await expect(vault.connect(owner).setFeeRecipient(feeRecipient.address)).to.be.revertedWith('Must be new feeRecipient')
+      await expect(vault.connect(owner).setFeeRecipient(feeRecipient.address)).to.be.revertedWith('SF')
     })
   })
 
@@ -171,13 +171,13 @@ describe('Unit test: Basic LyraVault flow', async () => {
 
   describe('basic deposit', async() => {
     it('should revert if trying to deposit 0', async() => {
-      await expect(vault.connect(anyone).deposit(0)).to.be.revertedWith('!amount');
+      await expect(vault.connect(anyone).deposit(0)).to.be.revertedWith('!A');
     })
     it('should revert if trying to use depositFor with amount = 0', async() => {
-      await expect(vault.connect(anyone).depositFor(0, depositor.address)).to.be.revertedWith('!amount');
+      await expect(vault.connect(anyone).depositFor(0, depositor.address)).to.be.revertedWith('!A');
     })
     it('should revert if trying to deposit to a 0 address', async() => {
-      await expect(vault.connect(anyone).depositFor(1, ethers.constants.AddressZero)).to.be.revertedWith('!creditor');
+      await expect(vault.connect(anyone).depositFor(1, ethers.constants.AddressZero)).to.be.revertedWith('!C');
     })
     it('should deposit ewth into the contract', async() => {
       
@@ -196,7 +196,7 @@ describe('Unit test: Basic LyraVault flow', async () => {
       const depositAmount = initCap.add(1)
       await seth.mint(depositor.address, depositAmount)
       await seth.connect(depositor).approve(vault.address, ethers.constants.MaxUint256)
-      await expect(vault.connect(depositor).deposit(depositAmount)).to.be.revertedWith('Exceed cap')
+      await expect(vault.connect(depositor).deposit(depositAmount)).to.be.revertedWith('EC')
     })
   })
 

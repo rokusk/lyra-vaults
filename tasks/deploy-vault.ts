@@ -5,6 +5,9 @@ import { Networks, sUSDAddress, sETHAddress, synthetixAddress, lyraOptionMarket 
 import { toBytes32 } from '../test/unit-tests/utils/synthetixUtils'
 import { ethers } from "ethers";
 
+/**
+ * example command: npx hardhat deploy-vault --network kovan-ovm
+ */
 task("deploy-vault", "Deploy vault contract")
   .addParam("feeRecipient", "fee recipient address", ethers.constants.AddressZero, types.string)
   .addParam("roundDuration", "round duration in seconds", 604800, types.int)
@@ -24,10 +27,14 @@ task("deploy-vault", "Deploy vault contract")
       asset: sETHAddress[network]
     }
 
+    console.log(`vaultParam`, vaultParam.asset)
+    console.log(`sUSDAddress`, sUSDAddress[network])
+    console.log(`lyraOptionMarket`, lyraOptionMarket[network])
+
     try {
       const lyraVault = await LyraVault.deploy(
         lyraOptionMarket[network],
-        sUSDAddress[network],
+        // sUSDAddress[network],
         feeRecipient,
         synthetixAddress[network],
         roundDuration,
@@ -43,6 +50,7 @@ task("deploy-vault", "Deploy vault contract")
       let message = error
       if ((error as any).reason) message = (error as any).reason
       console.error(`Deploying Error`, message)
+      console.error(`Detail`, error)
     }
     
   });

@@ -120,8 +120,8 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    * @param newFeeRecipient is the address of the new fee recipient
    */
   function setFeeRecipient(address newFeeRecipient) external onlyOwner {
-    require(newFeeRecipient != address(0), "!newFeeRecipient");
-    require(newFeeRecipient != feeRecipient, "Must be new feeRecipient");
+    require(newFeeRecipient != address(0), "IA"); // Invalid Address
+    require(newFeeRecipient != feeRecipient, "SF"); // Same FeeRecipient address
     feeRecipient = newFeeRecipient;
   }
 
@@ -130,7 +130,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    * @param newManagementFee is the management fee (6 decimals). ex: 2 * 10 ** 6 = 2%
    */
   function setManagementFee(uint newManagementFee) external onlyOwner {
-    require(newManagementFee < 100 * Vault.FEE_MULTIPLIER, "Invalid management fee");
+    require(newManagementFee < 100 * Vault.FEE_MULTIPLIER, "IM"); // Invalid Management fee
 
     emit ManagementFeeSet(managementFee, newManagementFee);
 
@@ -143,7 +143,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    * @param newPerformanceFee is the performance fee (6 decimals). ex: 20 * 10 ** 6 = 20%
    */
   function setPerformanceFee(uint newPerformanceFee) external onlyOwner {
-    require(newPerformanceFee < 100 * Vault.FEE_MULTIPLIER, "Invalid performance fee");
+    require(newPerformanceFee < 100 * Vault.FEE_MULTIPLIER, "IP"); // Invalid performance fee
 
     emit PerformanceFeeSet(performanceFee, newPerformanceFee);
 
@@ -155,7 +155,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    * @param newCap is the new cap for deposits
    */
   function setCap(uint newCap) external onlyOwner {
-    require(newCap > 0, "!newCap");
+    require(newCap > 0, "IC"); // Invalid Cap
 
     emit CapSet(vaultParams.cap, newCap, msg.sender);
 
@@ -172,7 +172,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    * @param amount is the amount of `asset` to deposit
    */
   function deposit(uint amount) external nonReentrant {
-    require(amount > 0, "!amount");
+    require(amount > 0, "!A"); // !amount
 
     _depositFor(amount, msg.sender);
 
@@ -187,8 +187,8 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    * @param creditor is the address that can claim/withdraw deposited amount
    */
   function depositFor(uint amount, address creditor) external nonReentrant {
-    require(amount > 0, "!amount");
-    require(creditor != address(0), "!creditor");
+    require(amount > 0, "!A");
+    require(creditor != address(0), "!C"); // !creditor
 
     _depositFor(amount, creditor);
 
@@ -205,7 +205,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
     uint currentRound = vaultState.round;
     uint totalWithDepositedAmount = totalBalance().add(amount);
 
-    require(totalWithDepositedAmount <= vaultParams.cap, "Exceed cap");
+    require(totalWithDepositedAmount <= vaultParams.cap, "EC"); // Exceed Cap
 
     emit Deposit(creditor, amount, currentRound);
 
@@ -245,7 +245,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    * @param numShares is the number of shares to withdraw
    */
   function initiateWithdraw(uint numShares) external nonReentrant {
-    require(numShares > 0, "!numShares");
+    require(numShares > 0, "!NS"); // numShares cannot be 0
 
     // We do a max redeem before initiating a withdrawal
     // But we check if they must first have unredeemed shares
@@ -267,7 +267,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
     if (withdrawalIsSameRound) {
       withdrawalShares = existingShares.add(numShares);
     } else {
-      require(existingShares == 0, "Existing withdraw");
+      require(existingShares == 0, "EW"); // Existing withdraw
       withdrawalShares = numShares;
       withdrawals[msg.sender].round = uint16(currentRound);
     }
@@ -292,9 +292,9 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
     uint withdrawalRound = withdrawal.round;
 
     // This checks if there is a withdrawal
-    require(withdrawalShares > 0, "Not initiated");
+    require(withdrawalShares > 0, "NI"); // Not initiated
 
-    require(withdrawalRound < vaultState.round, "Round in progress");
+    require(withdrawalRound < vaultState.round, "RP"); // Round in progress
 
     // We leave the round number as non-zero to save on gas for subsequent writes
     withdrawals[msg.sender].shares = 0;
@@ -310,7 +310,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
 
     _burn(address(this), withdrawalShares);
 
-    require(withdrawAmount > 0, "!withdrawAmount");
+    require(withdrawAmount > 0, "!WA"); // !withdrawAmount
 
     _transferAsset(msg.sender, withdrawAmount);
   }
@@ -320,7 +320,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    * @param numShares is the number of shares to redeem
    */
   function redeem(uint numShares) external nonReentrant {
-    require(numShares > 0, "!numShares");
+    require(numShares > 0, "!NS");
     _redeem(numShares, false);
   }
 
@@ -353,7 +353,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
     if (numShares == 0) {
       return;
     }
-    require(numShares <= unredeemedShares, "Exceeds available");
+    require(numShares <= unredeemedShares, "EA"); // Exceeds available
 
     // If we have a depositReceipt on the same round, BUT we have some unredeemed shares
     // we debit from the unredeemedShares, but leave the amount field intact

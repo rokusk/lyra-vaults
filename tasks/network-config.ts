@@ -18,5 +18,5 @@ export const sETHAddress: {[key in Networks]: string} = {
 
 // from https://docs.synthetix.io/addresses/
 export const synthetixAddress: {[key in Networks]: string} = {
-    [Networks.KOVAN_OVM]: '0x15e7Aa4Cd2C74750b5DCaC9B8B21B9189552BBaD'
+    [Networks.KOVAN_OVM]: '0x4194f283bC35521Ab503Fc2c4ee42E4Dc9aE10Ff'
 }

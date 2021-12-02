@@ -139,7 +139,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
       })
 
       it('should revert when using initiateWithdraw with shareNum = 0', async() => {
-        await expect(vault.connect(depositor).initiateWithdraw(0)).to.be.revertedWith('!numShares')
+        await expect(vault.connect(depositor).initiateWithdraw(0)).to.be.revertedWith('!NS')
       })
   
       it('should revert when using initiateWithdraw becuase user has no shares', async() => {
@@ -148,12 +148,12 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
       })
   
       it('should revert when calling competeWithdraw becuase user has no pending withdraw', async() => {
-        await expect(vault.connect(depositor).completeWithdraw()).to.be.revertedWith('Not initiated')
+        await expect(vault.connect(depositor).completeWithdraw()).to.be.revertedWith('NI')
       })
   
       it('should revert when calling redeem becuase depositor has no unreedemed shares', async() => {
         const sharesToWithdraw = depositAmount
-        await expect(vault.connect(depositor).redeem(sharesToWithdraw)).to.be.revertedWith('Exceeds available')
+        await expect(vault.connect(depositor).redeem(sharesToWithdraw)).to.be.revertedWith('EA')
       })
 
       it('should get 0 share if calling maxRedeem with no deposit Receipt', async() => {
@@ -220,7 +220,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
   
     describe('redeem shares', async() => {
       it('should revert while redeeming 0 shares', async() => {
-        await expect(vault.connect(depositor).redeem(0)).to.be.revertedWith('!numShares')
+        await expect(vault.connect(depositor).redeem(0)).to.be.revertedWith('!NS')
       })
       it('should has some share balance after rollover', async() => {
         const {heldByVault, heldByAccount} =  await vault.shareBalances(depositor.address)
@@ -333,7 +333,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
         expect(vaultBalanceAfter.sub(vaultBalanceBefore)).to.be.eq(settlementPayout)
       })
       it('should revert if trying to completeWithdraw', async() => {
-        await expect(vault.connect(depositor).completeWithdraw()).to.be.revertedWith('Round in progress')
+        await expect(vault.connect(depositor).completeWithdraw()).to.be.revertedWith('RP')
       })
       it('should rollover the vault to the next round', async() => {
         await vault.closeRound()
@@ -354,7 +354,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
     describe('after rollover', async() => {
       it('should revert when trying to initiateWithdraw again before completing queued withdraw', async() => {
         const sharesToWithdraw = depositAmount
-        await expect(vault.connect(depositor).initiateWithdraw(sharesToWithdraw)).to.be.revertedWith('Existing withdraw')
+        await expect(vault.connect(depositor).initiateWithdraw(sharesToWithdraw)).to.be.revertedWith('EW')
       })
       it('should be able to complete withdraw from previous rounds', async() => {
         const sethBalanceBefore = await seth.balanceOf(vault.address)
@@ -434,7 +434,7 @@ describe('Unit test: share calculating for pending deposit and withdraw', async 
       await vault.connect(owner).startNextRound()
     })
     it('should revert when trying to complete the withdraw, because the collateral is 0', async() => {
-      await expect(vault.connect(shrimp).completeWithdraw()).to.be.revertedWith('!withdrawAmount')
+      await expect(vault.connect(shrimp).completeWithdraw()).to.be.revertedWith('!WA')
     })
   })  
 }); 
