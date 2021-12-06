@@ -3,7 +3,6 @@ pragma solidity ^0.7.0;
 pragma abicoder v2;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Initializable} from "@openzeppelin/contracts/proxy/Initializable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
@@ -16,7 +15,7 @@ import {Vault} from "../libraries/Vault.sol";
 import "hardhat/console.sol";
 
 /// @notice LyraVault help users run option-selling strategies on Lyra AMM.
-contract LyraVault is Ownable, Initializable, BaseVault {
+contract LyraVault is Ownable, BaseVault {
   using SafeMath for uint;
 
   IOptionMarket public immutable optionMarket;
