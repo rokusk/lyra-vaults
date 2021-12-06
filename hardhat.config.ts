@@ -1,6 +1,7 @@
 import '@eth-optimism/plugins/hardhat/compiler';
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-waffle';
+import "@nomiclabs/hardhat-etherscan";
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import 'hardhat-contract-sizer';
@@ -40,7 +41,7 @@ export default {
     },
     'kovan-ovm': {
       url: 'https://kovan.optimism.io',
-      gasLimit: 20000000,
+      gasLimit: 10000000,
       ovm: true,
       accounts: { mnemonic },
     },

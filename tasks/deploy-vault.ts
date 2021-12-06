@@ -1,5 +1,6 @@
 import { task, types } from "hardhat/config";
 import "@nomiclabs/hardhat-waffle";
+// import { getContractFactory, predeploys }from '@eth-optimism/contracts'
 
 import { Networks, sUSDAddress, sETHAddress, synthetixAddress, lyraOptionMarket } from './network-config'
 import { toBytes32 } from '../test/unit-tests/utils/synthetixUtils'
@@ -8,7 +9,7 @@ import { constants } from "ethers";
 /**
  * example command: 
  * npx hardhat compile --network kovan-ovm
- * npx hardhat deploy-vault --network kovan-ovm
+ * npx hardhat deploy-vault --network kovan-ovm --fee-recipient 0x005e447ece1bd8Ecb114B9b8095276692445D466
  */
 task("deploy-vault", "Deploy vault contract")
   .addParam("feeRecipient", "fee recipient address", constants.AddressZero, types.string)
@@ -29,7 +30,7 @@ task("deploy-vault", "Deploy vault contract")
       asset: sETHAddress[network]
     }
 
-    console.log(`vaultParam`, vaultParam.asset)
+    console.log(`vault asset`, vaultParam.asset)
     console.log(`sUSDAddress`, sUSDAddress[network])
     console.log(`lyraOptionMarket`, lyraOptionMarket[network])
 
@@ -45,7 +46,7 @@ task("deploy-vault", "Deploy vault contract")
         vaultParam,
         toBytes32('sUSD'),
         toBytes32('sETH'),
-        { gasLimit: 10000000 }
+        { gasLimit: 2000000 }
       );
   
       console.log(`Deploying LyraVault contract to address ${lyraVault.address}`)
