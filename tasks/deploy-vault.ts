@@ -3,13 +3,15 @@ import "@nomiclabs/hardhat-waffle";
 
 import { Networks, sUSDAddress, sETHAddress, synthetixAddress, lyraOptionMarket } from './network-config'
 import { toBytes32 } from '../test/unit-tests/utils/synthetixUtils'
-import { ethers } from "ethers";
+import { constants } from "ethers";
 
 /**
- * example command: npx hardhat deploy-vault --network kovan-ovm
+ * example command: 
+ * npx hardhat compile --network kovan-ovm
+ * npx hardhat deploy-vault --network kovan-ovm
  */
 task("deploy-vault", "Deploy vault contract")
-  .addParam("feeRecipient", "fee recipient address", ethers.constants.AddressZero, types.string)
+  .addParam("feeRecipient", "fee recipient address", constants.AddressZero, types.string)
   .addParam("roundDuration", "round duration in seconds", 604800, types.int)
   .addParam("tokenName", "Name for the Lyra Vault share token", 'Lyra Vault Share', types.string)
   .addParam("tokenSymbol", "symbol for the Lyra Vault share token", 'VOLT', types.string)
@@ -19,7 +21,7 @@ task("deploy-vault", "Deploy vault contract")
     const {ethers} = hre
     const network = hre.network.name as Networks
 
-    const LyraVault = await ethers.getContractFactory("LyraVault");
+    const LyraVault = await ethers.getContractFactory('LyraVault');
 
     const vaultParam = {
       decimals,
@@ -34,7 +36,7 @@ task("deploy-vault", "Deploy vault contract")
     try {
       const lyraVault = await LyraVault.deploy(
         lyraOptionMarket[network],
-        // sUSDAddress[network],
+        sUSDAddress[network],
         feeRecipient,
         synthetixAddress[network],
         roundDuration,
@@ -42,7 +44,8 @@ task("deploy-vault", "Deploy vault contract")
         tokenSymbol,
         vaultParam,
         toBytes32('sUSD'),
-        toBytes32('sETH')
+        toBytes32('sETH'),
+        { gasLimit: 10000000 }
       );
   
       console.log(`Deploying LyraVault contract to address ${lyraVault.address}`)
@@ -50,7 +53,6 @@ task("deploy-vault", "Deploy vault contract")
       let message = error
       if ((error as any).reason) message = (error as any).reason
       console.error(`Deploying Error`, message)
-      console.error(`Detail`, error)
     }
     
   });

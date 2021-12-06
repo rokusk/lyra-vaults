@@ -40,7 +40,7 @@ export default {
     },
     'kovan-ovm': {
       url: 'https://kovan.optimism.io',
-      // gasLimit: 60000000,
+      gasLimit: 20000000,
       ovm: true,
       accounts: { mnemonic },
     },

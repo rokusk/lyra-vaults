@@ -36,10 +36,11 @@ contract LyraVault is Ownable, Initializable, BaseVault {
   /// @dev Synthetix currency key for sETH
   bytes32 private immutable sETHCurrencyKey;
 
-  // event StrategyUpdated(address strategy);
+  event StrategyUpdated(address strategy);
 
   constructor(
     address _optionMarket,
+    address _susd,
     address _feeRecipient,
     address _synthetix,
     uint _roundDuration,
@@ -51,17 +52,19 @@ contract LyraVault is Ownable, Initializable, BaseVault {
   ) BaseVault(_feeRecipient, _roundDuration, _tokenName, _tokenSymbol, _vaultParams) {
     optionMarket = IOptionMarket(_optionMarket);
     synthetix = ISynthetix(_synthetix);
+    IERC20(_vaultParams.asset).approve(_optionMarket, uint(-1));
+
     premiumCurrencyKey = _premiumCurrencyKey;
-    sETHCurrencyKey = _sETHCurrencyKey; 
+    sETHCurrencyKey = _sETHCurrencyKey;
+
+    // allow synthetix to trade sUSD for sETH
+    IERC20(_susd).approve(_synthetix, uint(-1));
   }
 
-  /// @dev init vault
-  function initVault(address _strategy, address _susd) external onlyOwner initializer {
+  /// @dev set strategy contract. This function can only be called by owner.
+  function setStrategy(address _strategy) external onlyOwner {
     strategy = IVaultStrategy(_strategy);
-    
-    // allow synthetix to trade sUSD for sETH
-    IERC20(_susd).approve(address(synthetix), uint(-1));
-    IERC20(vaultParams.asset).approve(address(optionMarket), uint(-1));
+    emit StrategyUpdated(_strategy);
   }
 
   /// @dev anyone can trigger a trade
