@@ -6,7 +6,7 @@ export function encodeDeltaStrategy(
   maxIv: BigNumber | number,
   size: BigNumber | number,
   interval: BigNumber | number,
-) : string {
+): string {
   const encoder = new ethers.utils.AbiCoder();
   return encoder.encode(['uint128', 'uint128', 'uint128', 'uint128'], [minIv, maxIv, size, interval]);
 }

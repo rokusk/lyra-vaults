@@ -64,8 +64,6 @@ contract LyraVault is Ownable, BaseVault {
   function setStrategy(address _strategy) external onlyOwner {
     strategy = IVaultStrategy(_strategy);
     emit StrategyUpdated(_strategy);
-
-
   }
 
   /// @dev anyone can trigger a trade

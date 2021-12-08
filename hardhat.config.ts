@@ -1,15 +1,15 @@
 import '@eth-optimism/plugins/hardhat/compiler';
 import '@nomiclabs/hardhat-ethers';
+import '@nomiclabs/hardhat-etherscan';
 import '@nomiclabs/hardhat-waffle';
-import "@nomiclabs/hardhat-etherscan";
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import 'hardhat-contract-sizer';
+import 'hardhat-deploy';
 import 'hardhat-gas-reporter';
 import 'hardhat-typechain';
 import 'solidity-coverage';
-
-import './tasks/deploy-vault'
+import './tasks/deploy-vault';
 
 dotenv.config();
 
@@ -31,7 +31,8 @@ export default {
       gasPrice: 0,
     },
     kovan: {
-      url: 'https://kovan.infura.io/v3/',
+      url: `https://kovan.infura.io/v3/${process.env.INFURA_ID}`,
+      accounts: { mnemonic },
     },
     'local-ovm': {
       url: 'http://127.0.0.1:8545',
@@ -54,6 +55,9 @@ export default {
         runs: 1,
       },
     },
+  },
+  namedAccounts: {
+    deployer: 0,
   },
   typechain: {
     outDir: 'typechain',
