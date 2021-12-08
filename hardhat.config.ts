@@ -6,6 +6,7 @@ import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import 'hardhat-contract-sizer';
 import 'hardhat-deploy';
+import 'hardhat-deploy-ethers';
 import 'hardhat-gas-reporter';
 import 'hardhat-typechain';
 import 'solidity-coverage';
