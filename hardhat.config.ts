@@ -9,7 +9,6 @@ import 'hardhat-deploy';
 import 'hardhat-gas-reporter';
 import 'hardhat-typechain';
 import 'solidity-coverage';
-import './tasks/deploy-vault';
 
 dotenv.config();
 

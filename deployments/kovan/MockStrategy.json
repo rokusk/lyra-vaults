@@ -1,0 +1,255 @@
+{
+  "address": "0x519c30A315b0E59FCecac65a626cA46016B5D413",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "checkPostTrade",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "isValid",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "mockedListingId",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "mockedMinPremium",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "mockedSize",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "mockedStrategyBytes",
+      "outputs": [
+        {
+          "internalType": "bytes",
+          "name": "",
+          "type": "bytes"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "requestTrade",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "listingId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "size",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "minPremium",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bool",
+          "name": "_isValid",
+          "type": "bool"
+        }
+      ],
+      "name": "setMockedPostCheck",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_listingId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_size",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_minPremium",
+          "type": "uint256"
+        }
+      ],
+      "name": "setMockedTradeRequest",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes",
+          "name": "_strategyBytes",
+          "type": "bytes"
+        }
+      ],
+      "name": "setStrategy",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x3d135b02202fb66e59d3df7912060651cf35d2ff20120bef7d81a8f495fda81d",
+  "receipt": {
+    "to": null,
+    "from": "0x005e447ece1bd8Ecb114B9b8095276692445D466",
+    "contractAddress": "0x519c30A315b0E59FCecac65a626cA46016B5D413",
+    "transactionIndex": 6,
+    "gasUsed": "288423",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0x81eb6236776fa9534b3cc6cbefb7144e89e1ea28e061a51a3affcd14876e71a1",
+    "transactionHash": "0x3d135b02202fb66e59d3df7912060651cf35d2ff20120bef7d81a8f495fda81d",
+    "logs": [],
+    "blockNumber": 28679004,
+    "cumulativeGasUsed": "967485",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "solcInputHash": "8718df598bfe1503fbffbe0482621e64",
+  "metadata": "{\"compiler\":{\"version\":\"0.7.6+commit.7338295f\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"checkPostTrade\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isValid\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"mockedListingId\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"mockedMinPremium\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"mockedSize\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"mockedStrategyBytes\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"requestTrade\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"listingId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"size\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"minPremium\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"_isValid\",\"type\":\"bool\"}],\"name\":\"setMockedPostCheck\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_listingId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_size\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_minPremium\",\"type\":\"uint256\"}],\"name\":\"setMockedTradeRequest\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_strategyBytes\",\"type\":\"bytes\"}],\"name\":\"setStrategy\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"checkPostTrade()\":{\"details\":\"this should be executed after the vault execute trade on OptionMarket\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"requestTrade()\":{\"notice\":\"request trade detail according to the strategy.\"}},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/mocks/MockStrategy.sol\":\"MockStrategy\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":1},\"remappings\":[]},\"sources\":{\"contracts/interfaces/ICollateralShort.sol\":{\"content\":\"//SPDX-License-Identifier: ISC\\npragma solidity >=0.7.6;\\npragma experimental ABIEncoderV2;\\n\\ninterface ICollateralShort {\\n  struct Loan {\\n    // ID for the loan\\n    uint id;\\n    //  Account that created the loan\\n    address account;\\n    //  Amount of collateral deposited\\n    uint collateral;\\n    // The synth that was borrowed\\n    bytes32 currency;\\n    //  Amount of synths borrowed\\n    uint amount;\\n    // Indicates if the position was short sold\\n    bool short;\\n    // interest amounts accrued\\n    uint accruedInterest;\\n    // last interest index\\n    uint interestIndex;\\n    // time of last interaction.\\n    uint lastInteraction;\\n  }\\n\\n  function loans(uint id)\\n    external\\n    returns (\\n      uint,\\n      address,\\n      uint,\\n      bytes32,\\n      uint,\\n      bool,\\n      uint,\\n      uint,\\n      uint\\n    );\\n\\n  function minCratio() external returns (uint);\\n\\n  function minCollateral() external returns (uint);\\n\\n  function issueFeeRate() external returns (uint);\\n\\n  function open(\\n    uint collateral,\\n    uint amount,\\n    bytes32 currency\\n  ) external returns (uint id);\\n\\n  function repay(\\n    address borrower,\\n    uint id,\\n    uint amount\\n  ) external returns (uint short, uint collateral);\\n\\n  function repayWithCollateral(uint id, uint repayAmount) external returns (uint short, uint collateral);\\n\\n  function draw(uint id, uint amount) external returns (uint short, uint collateral);\\n\\n  // Same as before\\n  function deposit(\\n    address borrower,\\n    uint id,\\n    uint amount\\n  ) external returns (uint short, uint collateral);\\n\\n  // Same as before\\n  function withdraw(uint id, uint amount) external returns (uint short, uint collateral);\\n\\n  // function to return the loan details in one call, without needing to know about the collateralstate\\n  function getShortAndCollateral(address account, uint id) external view returns (uint short, uint collateral);\\n}\\n\",\"keccak256\":\"0x25d500cea885a736526985aa0354913087fbbc331f998ea64ef3b55c0fc34298\",\"license\":\"ISC\"},\"contracts/interfaces/IExchangeRates.sol\":{\"content\":\"//SPDX-License-Identifier:MIT\\npragma solidity ^0.7.6;\\n\\n// https://docs.synthetix.io/contracts/source/interfaces/iexchangerates\\ninterface IExchangeRates {\\n  function rateAndInvalid(bytes32 currencyKey) external view returns (uint rate, bool isInvalid);\\n}\\n\",\"keccak256\":\"0xe96b4908782d4b0bda3ad2c2a5ebfa5884b045d897eda98f01a549c43b0bb18e\",\"license\":\"MIT\"},\"contracts/interfaces/IExchanger.sol\":{\"content\":\"//SPDX-License-Identifier:MIT\\npragma solidity ^0.7.6;\\n\\n// https://docs.synthetix.io/contracts/source/interfaces/iexchanger\\ninterface IExchanger {\\n  function feeRateForExchange(bytes32 sourceCurrencyKey, bytes32 destinationCurrencyKey)\\n    external\\n    view\\n    returns (uint exchangeFeeRate);\\n}\\n\",\"keccak256\":\"0xe00e0af91c2c3538487098c72b30670a96fffec9be9c5151e3e17bfc6d2b3d4c\",\"license\":\"MIT\"},\"contracts/interfaces/ILiquidityPool.sol\":{\"content\":\"//SPDX-License-Identifier: ISC\\npragma solidity 0.7.6;\\npragma experimental ABIEncoderV2;\\n\\nimport \\\"./ILyraGlobals.sol\\\";\\n\\ninterface ILiquidityPool {\\n  struct Collateral {\\n    uint quote;\\n    uint base;\\n  }\\n\\n  /// @dev These are all in quoteAsset amounts.\\n  struct Liquidity {\\n    uint freeCollatLiquidity;\\n    uint usedCollatLiquidity;\\n    uint freeDeltaLiquidity;\\n    uint usedDeltaLiquidity;\\n  }\\n\\n  enum Error {\\n    QuoteTransferFailed,\\n    AlreadySignalledWithdrawal,\\n    SignallingBetweenRounds,\\n    UnSignalMustSignalFirst,\\n    UnSignalAlreadyBurnable,\\n    WithdrawNotBurnable,\\n    EndRoundWithLiveBoards,\\n    EndRoundAlreadyEnded,\\n    EndRoundMustExchangeBase,\\n    EndRoundMustHedgeDelta,\\n    StartRoundMustEndRound,\\n    ReceivedZeroFromBaseQuoteExchange,\\n    ReceivedZeroFromQuoteBaseExchange,\\n    LockingMoreQuoteThanIsFree,\\n    LockingMoreBaseThanCanBeExchanged,\\n    FreeingMoreBaseThanLocked,\\n    SendPremiumNotEnoughCollateral,\\n    OnlyPoolHedger,\\n    OnlyOptionMarket,\\n    OnlyShortCollateral,\\n    ReentrancyDetected,\\n    Last\\n  }\\n\\n  function lockedCollateral() external view returns (uint, uint);\\n\\n  function queuedQuoteFunds() external view returns (uint);\\n\\n  function expiryToTokenValue(uint) external view returns (uint);\\n\\n  function deposit(address beneficiary, uint amount) external returns (uint);\\n\\n  function signalWithdrawal(uint certificateId) external;\\n\\n  function unSignalWithdrawal(uint certificateId) external;\\n\\n  function withdraw(address beneficiary, uint certificateId) external returns (uint value);\\n\\n  function tokenPriceQuote() external view returns (uint);\\n\\n  function endRound() external;\\n\\n  function startRound(uint lastMaxExpiryTimestamp, uint newMaxExpiryTimestamp) external;\\n\\n  function exchangeBase() external;\\n\\n  function lockQuote(uint amount, uint freeCollatLiq) external;\\n\\n  function lockBase(\\n    uint amount,\\n    ILyraGlobals.ExchangeGlobals memory exchangeGlobals,\\n    Liquidity memory liquidity\\n  ) external;\\n\\n  function freeQuoteCollateral(uint amount) external;\\n\\n  function freeBase(uint amountBase) external;\\n\\n  function sendPremium(\\n    address recipient,\\n    uint amount,\\n    uint freeCollatLiq\\n  ) external;\\n\\n  function boardLiquidation(\\n    uint amountQuoteFreed,\\n    uint amountQuoteReserved,\\n    uint amountBaseFreed\\n  ) external;\\n\\n  function sendReservedQuote(address user, uint amount) external;\\n\\n  function getTotalPoolValueQuote(uint basePrice, uint usedDeltaLiquidity) external view returns (uint);\\n\\n  function getLiquidity(uint basePrice, ICollateralShort short) external view returns (Liquidity memory);\\n\\n  function transferQuoteToHedge(ILyraGlobals.ExchangeGlobals memory exchangeGlobals, uint amount)\\n    external\\n    returns (uint);\\n}\\n\",\"keccak256\":\"0xa4f65a3aefa652a07b2758d129e28ba532c20acf67bef863070f68181b93db00\",\"license\":\"ISC\"},\"contracts/interfaces/ILyraGlobals.sol\":{\"content\":\"//SPDX-License-Identifier: ISC\\npragma solidity 0.7.6;\\npragma experimental ABIEncoderV2;\\n\\nimport \\\"./ICollateralShort.sol\\\";\\nimport \\\"./IExchangeRates.sol\\\";\\nimport \\\"./IExchanger.sol\\\";\\nimport \\\"./ISynthetix.sol\\\";\\n\\ninterface ILyraGlobals {\\n  enum ExchangeType {\\n    BASE_QUOTE,\\n    QUOTE_BASE,\\n    ALL\\n  }\\n\\n  /**\\n   * @dev Structs to help reduce the number of calls between other contracts and this one\\n   * Grouped in usage for a particular contract/use case\\n   */\\n  struct ExchangeGlobals {\\n    uint spotPrice;\\n    bytes32 quoteKey;\\n    bytes32 baseKey;\\n    ISynthetix synthetix;\\n    ICollateralShort short;\\n    uint quoteBaseFeeRate;\\n    uint baseQuoteFeeRate;\\n  }\\n\\n  struct GreekCacheGlobals {\\n    int rateAndCarry;\\n    uint spotPrice;\\n  }\\n\\n  struct PricingGlobals {\\n    uint optionPriceFeeCoefficient;\\n    uint spotPriceFeeCoefficient;\\n    uint vegaFeeCoefficient;\\n    uint vegaNormFactor;\\n    uint standardSize;\\n    uint skewAdjustmentFactor;\\n    int rateAndCarry;\\n    int minDelta;\\n    uint volatilityCutoff;\\n    uint spotPrice;\\n  }\\n\\n  function synthetix() external view returns (ISynthetix);\\n\\n  function exchanger() external view returns (IExchanger);\\n\\n  function exchangeRates() external view returns (IExchangeRates);\\n\\n  function collateralShort() external view returns (ICollateralShort);\\n\\n  function isPaused() external view returns (bool);\\n\\n  function tradingCutoff(address) external view returns (uint);\\n\\n  function optionPriceFeeCoefficient(address) external view returns (uint);\\n\\n  function spotPriceFeeCoefficient(address) external view returns (uint);\\n\\n  function vegaFeeCoefficient(address) external view returns (uint);\\n\\n  function vegaNormFactor(address) external view returns (uint);\\n\\n  function standardSize(address) external view returns (uint);\\n\\n  function skewAdjustmentFactor(address) external view returns (uint);\\n\\n  function rateAndCarry(address) external view returns (int);\\n\\n  function minDelta(address) external view returns (int);\\n\\n  function volatilityCutoff(address) external view returns (uint);\\n\\n  function quoteKey(address) external view returns (bytes32);\\n\\n  function baseKey(address) external view returns (bytes32);\\n\\n  function setGlobals(\\n    ISynthetix _synthetix,\\n    IExchanger _exchanger,\\n    IExchangeRates _exchangeRates,\\n    ICollateralShort _collateralShort\\n  ) external;\\n\\n  function setGlobalsForContract(\\n    address _contractAddress,\\n    uint _tradingCutoff,\\n    PricingGlobals memory pricingGlobals,\\n    bytes32 _quoteKey,\\n    bytes32 _baseKey\\n  ) external;\\n\\n  function setPaused(bool _isPaused) external;\\n\\n  function setTradingCutoff(address _contractAddress, uint _tradingCutoff) external;\\n\\n  function setOptionPriceFeeCoefficient(address _contractAddress, uint _optionPriceFeeCoefficient) external;\\n\\n  function setSpotPriceFeeCoefficient(address _contractAddress, uint _spotPriceFeeCoefficient) external;\\n\\n  function setVegaFeeCoefficient(address _contractAddress, uint _vegaFeeCoefficient) external;\\n\\n  function setVegaNormFactor(address _contractAddress, uint _vegaNormFactor) external;\\n\\n  function setStandardSize(address _contractAddress, uint _standardSize) external;\\n\\n  function setSkewAdjustmentFactor(address _contractAddress, uint _skewAdjustmentFactor) external;\\n\\n  function setRateAndCarry(address _contractAddress, int _rateAndCarry) external;\\n\\n  function setMinDelta(address _contractAddress, int _minDelta) external;\\n\\n  function setVolatilityCutoff(address _contractAddress, uint _volatilityCutoff) external;\\n\\n  function setQuoteKey(address _contractAddress, bytes32 _quoteKey) external;\\n\\n  function setBaseKey(address _contractAddress, bytes32 _baseKey) external;\\n\\n  function getSpotPriceForMarket(address _contractAddress) external view returns (uint);\\n\\n  function getSpotPrice(bytes32 to) external view returns (uint);\\n\\n  function getPricingGlobals(address _contractAddress) external view returns (PricingGlobals memory);\\n\\n  function getGreekCacheGlobals(address _contractAddress) external view returns (GreekCacheGlobals memory);\\n\\n  function getExchangeGlobals(address _contractAddress, ExchangeType exchangeType)\\n    external\\n    view\\n    returns (ExchangeGlobals memory exchangeGlobals);\\n\\n  function getGlobalsForOptionTrade(address _contractAddress, bool isBuy)\\n    external\\n    view\\n    returns (\\n      PricingGlobals memory pricingGlobals,\\n      ExchangeGlobals memory exchangeGlobals,\\n      uint tradeCutoff\\n    );\\n}\\n\",\"keccak256\":\"0x61a2b4906f11e94fc7eee1e9cd5a55726d19f0f2e0d3177ce238c6090ffeee1d\",\"license\":\"ISC\"},\"contracts/interfaces/IOptionMarket.sol\":{\"content\":\"//SPDX-License-Identifier: ISC\\npragma solidity 0.7.6;\\npragma experimental ABIEncoderV2;\\n\\nimport \\\"./ILiquidityPool.sol\\\";\\n\\ninterface IOptionMarket {\\n  struct OptionListing {\\n    uint id;\\n    uint strike;\\n    uint skew;\\n    uint longCall;\\n    uint shortCall;\\n    uint longPut;\\n    uint shortPut;\\n    uint boardId;\\n  }\\n\\n  struct OptionBoard {\\n    uint id;\\n    uint expiry;\\n    uint iv;\\n    bool frozen;\\n    uint[] listingIds;\\n  }\\n\\n  struct Trade {\\n    bool isBuy;\\n    uint amount;\\n    uint vol;\\n    uint expiry;\\n    ILiquidityPool.Liquidity liquidity;\\n  }\\n\\n  enum TradeType {\\n    LONG_CALL,\\n    SHORT_CALL,\\n    LONG_PUT,\\n    SHORT_PUT\\n  }\\n\\n  enum Error {\\n    TransferOwnerToZero,\\n    InvalidBoardId,\\n    InvalidBoardIdOrNotFrozen,\\n    InvalidListingIdOrNotFrozen,\\n    StrikeSkewLengthMismatch,\\n    BoardMaxExpiryReached,\\n    CannotStartNewRoundWhenBoardsExist,\\n    ZeroAmountOrInvalidTradeType,\\n    BoardFrozenOrTradingCutoffReached,\\n    QuoteTransferFailed,\\n    BaseTransferFailed,\\n    BoardNotExpired,\\n    BoardAlreadyLiquidated,\\n    OnlyOwner,\\n    Last\\n  }\\n\\n  function maxExpiryTimestamp() external view returns (uint);\\n\\n  function optionBoards(uint)\\n    external\\n    view\\n    returns (\\n      uint id,\\n      uint expiry,\\n      uint iv,\\n      bool frozen\\n    );\\n\\n  function optionListings(uint)\\n    external\\n    view\\n    returns (\\n      uint id,\\n      uint strike,\\n      uint skew,\\n      uint longCall,\\n      uint shortCall,\\n      uint longPut,\\n      uint shortPut,\\n      uint boardId\\n    );\\n\\n  function boardToPriceAtExpiry(uint) external view returns (uint);\\n\\n  function listingToBaseReturnedRatio(uint) external view returns (uint);\\n\\n  function settleOptions(uint listingId, TradeType tradeType) external;\\n\\n  function openPosition(\\n    uint _listingId,\\n    TradeType tradeType,\\n    uint amount\\n  ) external returns (uint totalCost);\\n\\n  function transferOwnership(address newOwner) external;\\n\\n  function setBoardFrozen(uint boardId, bool frozen) external;\\n\\n  function setBoardBaseIv(uint boardId, uint baseIv) external;\\n\\n  function setListingSkew(uint listingId, uint skew) external;\\n}\\n\",\"keccak256\":\"0x710350b6a8ac2ceca83576e0218dd2d3058a0e6ca15f114b05b86d13b46b9795\",\"license\":\"ISC\"},\"contracts/interfaces/ISynthetix.sol\":{\"content\":\"//SPDX-License-Identifier: ISC\\npragma solidity >=0.7.6;\\n\\ninterface ISynthetix {\\n  function exchange(\\n    bytes32 sourceCurrencyKey,\\n    uint sourceAmount,\\n    bytes32 destinationCurrencyKey\\n  ) external returns (uint amountReceived);\\n\\n  function exchangeOnBehalf(\\n    address exchangeForAddress,\\n    bytes32 sourceCurrencyKey,\\n    uint sourceAmount,\\n    bytes32 destinationCurrencyKey\\n  ) external returns (uint amountReceived);\\n}\\n\",\"keccak256\":\"0xe84a3c7b54ba99ee0afde22495d5968a55631f1265cf54c6f531f0d12a6a070f\",\"license\":\"ISC\"},\"contracts/interfaces/IVaultStrategy.sol\":{\"content\":\"//SPDX-License-Identifier:MIT\\npragma solidity ^0.7.6;\\n\\nimport {IOptionMarket} from \\\"./IOptionMarket.sol\\\";\\n\\ninterface IVaultStrategy {\\n  function setStrategy(bytes memory strategyBytes) external;\\n\\n  function requestTrade()\\n    external\\n    view\\n    returns (\\n      uint listingId,\\n      uint amount,\\n      uint minPremium\\n    );\\n\\n  function checkPostTrade() external view returns (bool);\\n}\\n\",\"keccak256\":\"0x8ef8a3a359dcc037c6d34b1795ceac3c7de1614f39456c399f913ba0f5614e0b\",\"license\":\"MIT\"},\"contracts/mocks/MockStrategy.sol\":{\"content\":\"//SPDX-License-Identifier: MIT\\npragma solidity ^0.7.0;\\n\\nimport {IVaultStrategy} from \\\"../interfaces/IVaultStrategy.sol\\\";\\n\\ncontract MockStrategy is IVaultStrategy {\\n  uint public mockedListingId;\\n  uint public mockedSize;\\n  uint public mockedMinPremium;\\n\\n  bytes public mockedStrategyBytes;\\n\\n  bool public isValid;\\n\\n  function setStrategy(bytes memory _strategyBytes) external override {\\n    mockedStrategyBytes = _strategyBytes;\\n  }\\n\\n  function setMockedTradeRequest(\\n    uint _listingId,\\n    uint _size,\\n    uint _minPremium\\n  ) public {\\n    mockedListingId = _listingId;\\n    mockedSize = _size;\\n    mockedMinPremium = _minPremium;\\n  }\\n\\n  function setMockedPostCheck(bool _isValid) external {\\n    isValid = _isValid;\\n  }\\n\\n  /**\\n   * request trade detail according to the strategy.\\n   */\\n  function requestTrade()\\n    external\\n    view\\n    override\\n    returns (\\n      uint listingId,\\n      uint size,\\n      uint minPremium\\n    )\\n  {\\n    return (mockedListingId, mockedSize, mockedMinPremium);\\n  }\\n\\n  /**\\n   * @dev this should be executed after the vault execute trade on OptionMarket\\n   */\\n  function checkPostTrade() external view override returns (bool) {\\n    return isValid;\\n  }\\n}\\n\",\"keccak256\":\"0xb835b1258c673a2b94b6834ac78c879b54196bacbf59ceb19d063da1d495c28d\",\"license\":\"MIT\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b50610441806100206000396000f3fe608060405234801561001057600080fd5b506004361061008e5760003560e01c8063166c39841461009357806327ef5632146100ad5780634f668421146100b5578063591bbc73146100d657806375bd3167146100fc578063969fdf6a14610125578063a72bd3bf146101c9578063ab30ef4d14610246578063bb5d40eb14610262578063f994a7f71461026a575b600080fd5b61009b610272565b60408051918252519081900360200190f35b61009b610278565b6100d4600480360360208110156100cb57600080fd5b5035151561027e565b005b6100de610291565b60408051938452602084019290925282820152519081900360600190f35b6100d46004803603606081101561011257600080fd5b508035906020810135906040013561029f565b6100d46004803603602081101561013b57600080fd5b810190602081018135600160201b81111561015557600080fd5b82018360208201111561016757600080fd5b803590602001918460018302840111600160201b8311171561018857600080fd5b91908080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152509295506102ad945050505050565b6101d16102c4565b6040805160208082528351818301528351919283929083019185019080838360005b8381101561020b5781810151838201526020016101f3565b50505050905090810190601f1680156102385780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b61024e610352565b604080519115158252519081900360200190f35b61024e61035b565b61009b610364565b60005481565b60015481565b6004805460ff1916911515919091179055565b600054600154600254909192565b600092909255600155600255565b80516102c090600390602084019061036a565b5050565b6003805460408051602060026001851615610100026000190190941693909304601f8101849004840282018401909252818152929183018282801561034a5780601f1061031f5761010080835404028352916020019161034a565b820191906000526020600020905b81548152906001019060200180831161032d57829003601f168201915b505050505081565b60045460ff1690565b60045460ff1681565b60025481565b828054600181600116156101000203166002900490600052602060002090601f0160209004810192826103a057600085556103e6565b82601f106103b957805160ff19168380011785556103e6565b828001600101855582156103e6579182015b828111156103e65782518255916020019190600101906103cb565b506103f29291506103f6565b5090565b5b808211156103f257600081556001016103f756fea264697066735822122037ca31cc2919de1f45a36323c3ca8f8307b6430e2abe4bc960f65ffd2ac4524964736f6c63430007060033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b506004361061008e5760003560e01c8063166c39841461009357806327ef5632146100ad5780634f668421146100b5578063591bbc73146100d657806375bd3167146100fc578063969fdf6a14610125578063a72bd3bf146101c9578063ab30ef4d14610246578063bb5d40eb14610262578063f994a7f71461026a575b600080fd5b61009b610272565b60408051918252519081900360200190f35b61009b610278565b6100d4600480360360208110156100cb57600080fd5b5035151561027e565b005b6100de610291565b60408051938452602084019290925282820152519081900360600190f35b6100d46004803603606081101561011257600080fd5b508035906020810135906040013561029f565b6100d46004803603602081101561013b57600080fd5b810190602081018135600160201b81111561015557600080fd5b82018360208201111561016757600080fd5b803590602001918460018302840111600160201b8311171561018857600080fd5b91908080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152509295506102ad945050505050565b6101d16102c4565b6040805160208082528351818301528351919283929083019185019080838360005b8381101561020b5781810151838201526020016101f3565b50505050905090810190601f1680156102385780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b61024e610352565b604080519115158252519081900360200190f35b61024e61035b565b61009b610364565b60005481565b60015481565b6004805460ff1916911515919091179055565b600054600154600254909192565b600092909255600155600255565b80516102c090600390602084019061036a565b5050565b6003805460408051602060026001851615610100026000190190941693909304601f8101849004840282018401909252818152929183018282801561034a5780601f1061031f5761010080835404028352916020019161034a565b820191906000526020600020905b81548152906001019060200180831161032d57829003601f168201915b505050505081565b60045460ff1690565b60045460ff1681565b60025481565b828054600181600116156101000203166002900490600052602060002090601f0160209004810192826103a057600085556103e6565b82601f106103b957805160ff19168380011785556103e6565b828001600101855582156103e6579182015b828111156103e65782518255916020019190600101906103cb565b506103f29291506103f6565b5090565b5b808211156103f257600081556001016103f756fea264697066735822122037ca31cc2919de1f45a36323c3ca8f8307b6430e2abe4bc960f65ffd2ac4524964736f6c63430007060033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {
+      "checkPostTrade()": {
+        "details": "this should be executed after the vault execute trade on OptionMarket"
+      }
+    },
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {
+      "requestTrade()": {
+        "notice": "request trade detail according to the strategy."
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 4702,
+        "contract": "contracts/mocks/MockStrategy.sol:MockStrategy",
+        "label": "mockedListingId",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 4704,
+        "contract": "contracts/mocks/MockStrategy.sol:MockStrategy",
+        "label": "mockedSize",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 4706,
+        "contract": "contracts/mocks/MockStrategy.sol:MockStrategy",
+        "label": "mockedMinPremium",
+        "offset": 0,
+        "slot": "2",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 4708,
+        "contract": "contracts/mocks/MockStrategy.sol:MockStrategy",
+        "label": "mockedStrategyBytes",
+        "offset": 0,
+        "slot": "3",
+        "type": "t_bytes_storage"
+      },
+      {
+        "astId": 4710,
+        "contract": "contracts/mocks/MockStrategy.sol:MockStrategy",
+        "label": "isValid",
+        "offset": 0,
+        "slot": "4",
+        "type": "t_bool"
+      }
+    ],
+    "types": {
+      "t_bool": {
+        "encoding": "inplace",
+        "label": "bool",
+        "numberOfBytes": "1"
+      },
+      "t_bytes_storage": {
+        "encoding": "bytes",
+        "label": "bytes",
+        "numberOfBytes": "32"
+      },
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      }
+    }
+  }
+}

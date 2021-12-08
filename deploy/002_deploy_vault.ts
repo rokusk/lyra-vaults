@@ -54,10 +54,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   }
 
   // verify contract
-  await hre.run('verify:verify', {
-    address: contract.address,
-    constructorArguments: args,
-  });
+  try {
+    await hre.run('verify:verify', {
+      address: contract.address,
+      constructorArguments: args,
+    });
+  } catch (error) {
+    console.log(`verification error`, error);
+  }
 };
 
 export default func;
