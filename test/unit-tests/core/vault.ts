@@ -3,7 +3,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { LyraVault, MockOptionMarket, MockStrategy, MockSynthetix, MockERC20 } from '../../../typechain';
-import { FEE_MULTIPLIER, WEEKS_PER_YEAR } from '../utils/constants';
+import { FEE_MULTIPLIER } from '../utils/constants';
 import { BigNumber } from 'ethers'
 import { toBytes32 } from '../utils/synthetixUtils';
 
@@ -91,6 +91,7 @@ describe('Unit test: Basic LyraVault flow', async () => {
         susd.address,
         owner.address, // feeRecipient,
         mockedSynthetix.address,
+        86400 * 7,
         "LyraVault Share",
         "Lyra VS",
         {
@@ -126,7 +127,7 @@ describe('Unit test: Basic LyraVault flow', async () => {
       await vault.connect(owner).setManagementFee(managementFee)
 
       const fee = await vault.managementFee()
-      const weeklyFee = BigNumber.from(managementFee).mul(FEE_MULTIPLIER).div(WEEKS_PER_YEAR)
+      const weeklyFee = BigNumber.from(managementFee).mul(7).div(365)
       expect(weeklyFee).to.be.eq(fee);
     })
     it('should revert when trying to set a mangement fee that\'s too high', async() => {
