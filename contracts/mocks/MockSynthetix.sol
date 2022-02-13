@@ -9,10 +9,6 @@ contract MockSynthetix is ISynthetix {
 
   mapping(address => uint) private mockedTradeAmount;
 
-  constructor() {
-    // really
-  }
-
   function setMockedKeyToAddress(bytes32 _key, address _address) external {
     addressMap[_key] = _address;
   }
