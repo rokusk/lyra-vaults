@@ -35,6 +35,12 @@ contract LyraVault is Ownable, BaseVault {
 
   event StrategyUpdated(address strategy);
 
+  event Trade(address user, uint contractSize, uint collateralAmount, uint listingId, uint premium);
+
+  event RoundStarted(uint16 roundId, uint104 lockAmount);
+
+  event RoundClosed(uint16 roundId, uint104 lockAmount);
+
   constructor(
     address _optionMarket,
     address _susd,
@@ -88,6 +94,8 @@ contract LyraVault is Ownable, BaseVault {
 
     // exhcnage sUSD to sETH
     synthetix.exchange(premiumCurrencyKey, realPremium, sETHCurrencyKey);
+
+    emit Trade(msg.sender, amount, assetUsed, listingId, realPremium);
   }
 
   /// @notice settle outstanding short positions.
@@ -103,11 +111,14 @@ contract LyraVault is Ownable, BaseVault {
 
   /// @dev close the current round, enable user to deposit for the next round
   function closeRound() external onlyOwner {
-    vaultState.lastLockedAmount = vaultState.lockedAmount;
+    uint104 lockAmount = vaultState.lockedAmount;
+    vaultState.lastLockedAmount = lockAmount;
     vaultState.lockedAmountLeft = 0;
     vaultState.lockedAmount = 0;
     vaultState.nextRoundReadyTimestamp = block.timestamp.add(Vault.ROUND_DELAY);
     vaultState.roundInProgress = false;
+
+    emit RoundClosed(vaultState.round, lockAmount);
   }
 
   /// @notice start the next round
@@ -121,5 +132,7 @@ contract LyraVault is Ownable, BaseVault {
     vaultState.lockedAmountLeft = lockedBalance;
     vaultState.roundInProgress = true;
     lastQueuedWithdrawAmount = uint128(queuedWithdrawAmount);
+
+    emit RoundStarted(vaultState.round, uint104(lockedBalance));
   }
 }
