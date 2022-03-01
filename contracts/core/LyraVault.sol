@@ -12,8 +12,6 @@ import {IOptionMarket} from "../interfaces/IOptionMarket.sol";
 import {ISynthetix} from "../interfaces/ISynthetix.sol";
 import {Vault} from "../libraries/Vault.sol";
 
-import "hardhat/console.sol";
-
 /// @notice LyraVault help users run option-selling strategies on Lyra AMM.
 contract LyraVault is Ownable, BaseVault {
   using SafeMath for uint;
@@ -74,6 +72,8 @@ contract LyraVault is Ownable, BaseVault {
 
     // open a short call position on lyra and collect premium
     uint collateralBefore = IERC20(vaultParams.asset).balanceOf(address(this));
+
+    // todo: update to Avalon interface
     uint realPremium = optionMarket.openPosition(listingId, IOptionMarket.TradeType.SHORT_CALL, amount);
     uint collateralAfter = IERC20(vaultParams.asset).balanceOf(address(this));
 
@@ -95,6 +95,7 @@ contract LyraVault is Ownable, BaseVault {
   /// @param listingIds an array of listingId that the vault traded with in the last round.
   function settle(uint[] memory listingIds) external {
     // eth call options are settled in eth
+    // todo: update to Avalon interface
     for (uint i = 0; i < listingIds.length; i++) {
       optionMarket.settleOptions(listingIds[i], IOptionMarket.TradeType.SHORT_CALL);
     }
