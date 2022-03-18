@@ -1,34 +1,25 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.9;
 pragma experimental ABIEncoderV2;
 
 // Hardhat
 import "hardhat/console.sol";
 
 // Interfaces
-import {IVaultStrategy} from "../interfaces/IVaultStrategy.sol";
-import {IBlackScholes} from "../interfaces/IBlackScholes.sol";
-import {ILyraGlobals} from "../interfaces/ILyraGlobals.sol";
-
-import {IOptionMarket} from "../interfaces/IOptionMarket.sol";
-import {IOptionGreekCache} from "../interfaces/IOptionGreekCache.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Libraries
 import "../synthetix/SafeDecimalMath.sol";
 import "../synthetix/SignedSafeDecimalMath.sol";
 
-contract DeltaStrategy is IVaultStrategy, Ownable {
+contract DeltaStrategy is Ownable {
   using SafeMath for uint;
   using SafeDecimalMath for uint;
   using SignedSafeMath for int;
   using SignedSafeDecimalMath for int;
 
   address public immutable vault;
-  IBlackScholes public immutable blackScholes;
-  IOptionMarket public immutable optionMarket;
-  IOptionGreekCache public immutable greekCache;
-  ILyraGlobals public immutable lyraGlobals;
+  address public immutable optionMarket;
 
   // example strategy detail
   struct DeltaStrategyDetail {
@@ -44,46 +35,17 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
 
   DeltaStrategyDetail public currentStrategy;
 
-  constructor(
-    address _vault,
-    IBlackScholes _blackScholes,
-    IOptionMarket _optionMarket,
-    IOptionGreekCache _greekCache,
-    ILyraGlobals _lyraGlobals
-  ) {
+  constructor(address _vault, address _optionMarket) {
     vault = _vault;
-    blackScholes = _blackScholes;
     optionMarket = _optionMarket;
-    greekCache = _greekCache;
-    lyraGlobals = _lyraGlobals;
   }
 
   /**
    * @dev update the strategy for the new round.
-   * @param strategyBytes decoded strategy data
    */
-  function setStrategy(bytes memory strategyBytes) external override onlyOwner {
-    //todo: check that the vault is in a state that allows changing strategy
-    (
-      uint minTimeToExpiry,
-      uint maxTimeToExpiry,
-      int targetDelta,
-      int maxDeltaGap,
-      uint minIv,
-      uint maxIv,
-      uint size,
-      uint minInterval
-    ) = abi.decode(strategyBytes, (uint, uint, int, int, uint, uint, uint, uint));
-    currentStrategy = DeltaStrategyDetail({
-      minTimeToExpiry: minTimeToExpiry,
-      maxTimeToExpiry: maxTimeToExpiry,
-      targetDelta: targetDelta,
-      maxDeltaGap: maxDeltaGap,
-      minIv: minIv,
-      maxIv: maxIv,
-      size: size,
-      minInterval: minInterval
-    });
+  function setStrategy(DeltaStrategyDetail memory _deltaStrategy) external onlyOwner {
+    //todo: add requires to params
+    currentStrategy = _deltaStrategy;
     //todo: set the round status on vault
     // vault.startWithdrawPeriod
   }
@@ -91,26 +53,21 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
   /**
    * request trade detail according to the strategy.
    */
-  function requestTrade(uint boardId)
-    external
-    view
-    override
-    returns (
-      uint listingId,
-      uint amount,
-      uint minPremium
-    )
-  {
+  function doTrade() external view returns (uint positionId, uint premium) {
     // todo: check whether minInterval has passed
-    listingId = _getListing(boardId);
-    amount = _getTradeAmount();
-    minPremium = _getMinPremium(listingId);
+    uint boardId = 1;
+    uint listingId = _getListing(boardId);
+    uint amount = _getTradeAmount();
+    uint minPremium = _getMinPremium(listingId);
+
+    premium = 100e18; // todo: fix
+    positionId = 1;
   }
 
   /**
    * @dev this should be executed after the vault execute trade on OptionMarket
    */
-  function checkPostTrade() external pure override returns (bool isValid) {
+  function checkPostTrade() external pure returns (bool isValid) {
     isValid = true;
   }
 
@@ -122,68 +79,70 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
   function _getListing(uint boardId) internal view returns (uint listingId) {
     //todo: generalize to both calls/puts
     //todo: need to get accurate spot price
-    (uint id, uint expiry, uint boardIV, bool frozen) = optionMarket.optionBoards(boardId);
+    // (uint id, uint expiry, uint boardIV, bool frozen) = optionMarket.optionBoards(boardId);
 
-    // Ensure board is within expiry limits
-    uint timeToExpiry = expiry.sub(block.timestamp);
-    require(
-      timeToExpiry < currentStrategy.maxTimeToExpiry && timeToExpiry > currentStrategy.minTimeToExpiry,
-      "Board is outside of expiry bounds"
-    );
+    // // Ensure board is within expiry limits
+    // uint timeToExpiry = expiry.sub(block.timestamp);
+    // require(
+    //   timeToExpiry < currentStrategy.maxTimeToExpiry && timeToExpiry > currentStrategy.minTimeToExpiry,
+    //   "Board is outside of expiry bounds"
+    // );
 
-    uint[] memory listings = optionMarket.getBoardListings(boardId);
-    int deltaGap;
-    uint listingIv;
-    uint currentListingId;
-    uint skew;
-    int callDelta;
-    uint optimalListingId = 0;
-    int optimalDeltaGap = type(int).max;
+    // uint[] memory listings = optionMarket.getBoardListings(boardId);
+    // int deltaGap;
+    // uint listingIv;
+    // uint currentListingId;
+    // uint skew;
+    // int callDelta;
+    // uint optimalListingId = 0;
+    // int optimalDeltaGap = type(int).max;
 
-    for (uint i = 0; i < listings.length; i++) {
-      (currentListingId, , skew, , callDelta, , , , , , ) = greekCache.listingCaches(listings[i]);
-      listingIv = boardIV.multiplyDecimal(skew);
+    // for (uint i = 0; i < listings.length; i++) {
+    //   (currentListingId, , skew, , callDelta, , , , , , ) = greekCache.listingCaches(listings[i]);
+    //   listingIv = boardIV.multiplyDecimal(skew);
 
-      deltaGap = abs(callDelta.sub(currentStrategy.targetDelta));
+    //   deltaGap = abs(callDelta.sub(currentStrategy.targetDelta));
 
-      if (
-        listingIv < currentStrategy.minIv || listingIv > currentStrategy.maxIv || deltaGap > currentStrategy.maxDeltaGap
-      ) {
-        continue;
-      } else if (deltaGap < optimalDeltaGap) {
-        optimalListingId = currentListingId;
-        optimalDeltaGap = deltaGap;
-      }
-    }
-    require(optimalListingId != 0, "Not able to find valid listing");
-    return optimalListingId;
+    //   if (
+    //     listingIv < currentStrategy.minIv || listingIv > currentStrategy.maxIv || deltaGap > currentStrategy.maxDeltaGap
+    //   ) {
+    //     continue;
+    //   } else if (deltaGap < optimalDeltaGap) {
+    //     optimalListingId = currentListingId;
+    //     optimalDeltaGap = deltaGap;
+    //   }
+    // }
+    // require(optimalListingId != 0, "Not able to find valid listing");
+    // return optimalListingId;
+
+    return 1;
   }
 
   /**
    * @dev get minimum premium that the vault should receive.
    * param listingId lyra option listing id
    * param size size of trade in Lyra standard sizes
-   * @return minPremium the min amount of sUSD the vault should receive
    */
   function _getMinPremium(uint listingId) internal view returns (uint minPremium) {
-    // todo: can we use lyraGlobals.skewAdjustmentFactor()?
-    (, uint strike, uint skew, , , , , , , , uint boardId) = greekCache.listingCaches(listingId);
-    (, uint expiry, uint boardIv, ) = optionMarket.optionBoards(boardId);
-    uint timeToExpirySec = expiry.sub(block.timestamp);
-    ILyraGlobals.PricingGlobals memory pricingGlobals = lyraGlobals.getPricingGlobals(address(optionMarket));
+    // // todo: can we use lyraGlobals.skewAdjustmentFactor()?
+    // (, uint strike, uint skew, , , , , , , , uint boardId) = greekCache.listingCaches(listingId);
+    // (, uint expiry, uint boardIv, ) = optionMarket.optionBoards(boardId);
+    // uint timeToExpirySec = expiry.sub(block.timestamp);
+    // ILyraGlobals.PricingGlobals memory pricingGlobals = lyraGlobals.getPricingGlobals(address(optionMarket));
 
-    uint impactedIv = _getImpactedIv(boardIv, skew, pricingGlobals.skewAdjustmentFactor);
+    // uint impactedIv = _getImpactedIv(boardIv, skew, pricingGlobals.skewAdjustmentFactor);
 
-    // getting pure black scholes price without Lyra/SNX fees
-    (uint callPremium, uint putPremium) = blackScholes.optionPrices(
-      timeToExpirySec,
-      impactedIv,
-      pricingGlobals.spotPrice, //todo: need to generalize to any asset
-      strike, // todo: need to resolve stack too deep errors
-      pricingGlobals.rateAndCarry
-    );
+    // // getting pure black scholes price without Lyra/SNX fees
+    // (uint callPremium, uint putPremium) = blackScholes.optionPrices(
+    //   timeToExpirySec,
+    //   impactedIv,
+    //   pricingGlobals.spotPrice, //todo: need to generalize to any asset
+    //   strike, // todo: need to resolve stack too deep errors
+    //   pricingGlobals.rateAndCarry
+    // );
 
-    minPremium = callPremium; // todo: generalize to calls and puts;
+    // minPremium = callPremium; // todo: generalize to calls and puts;
+    return 100e18;
   }
 
   function _getImpactedIv(
@@ -202,7 +161,8 @@ contract DeltaStrategy is IVaultStrategy, Ownable {
    */
   function _getTradeAmount() internal view returns (uint amount) {
     // need to check if lyraGlobals.standardSize can be used instead to save on cost.
-    amount = currentStrategy.size.multiplyDecimal(lyraGlobals.standardSize(address(optionMarket)));
+    uint standardSize = 1;
+    amount = currentStrategy.size.multiplyDecimal(standardSize);
   }
 
   function abs(int val) internal pure returns (int) {

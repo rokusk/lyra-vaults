@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.9;
 
-import {IOptionMarket} from "../interfaces/IOptionMarket.sol";
+import {OptionMarket} from "@lyrafinance/core/contracts/OptionMarket.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract MockOptionMarket {
@@ -27,7 +27,7 @@ contract MockOptionMarket {
 
   function openPosition(
     uint, /*_listingId*/
-    IOptionMarket.TradeType, /*tradeType*/
+    OptionMarket.OptionType, /*tradeType*/
     uint /*amount*/
   ) external returns (uint totalCost) {
     IERC20(collateralToken).transferFrom(msg.sender, address(this), collateral);
@@ -39,7 +39,7 @@ contract MockOptionMarket {
 
   function settleOptions(
     uint, /*listingId*/
-    IOptionMarket.TradeType /*tradeType*/
+    OptionMarket.OptionType /*tradeType*/
   ) external {
     IERC20(collateralToken).transfer(msg.sender, settlementPayout);
   }

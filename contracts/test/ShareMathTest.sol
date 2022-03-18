@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
-pragma abicoder v2;
+pragma solidity ^0.8.9;
 
 import {ShareMath} from "../libraries/ShareMath.sol";
 import {Vault} from "../libraries/Vault.sol";
