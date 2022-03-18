@@ -63,9 +63,8 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    *  IMMUTABLES & CONSTANTS
    ***********************************************/
 
-  // Number of weeks per year = 52.142857 weeks * FEE_MULTIPLIER = 52142857
-  // Dividing by weeks per year requires doing num.mul(FEE_MULTIPLIER).div(WEEKS_PER_YEAR)
-  uint private constant WEEKS_PER_YEAR = 52142857;
+  // Round per year scaled up FEE_MULTIPLIER
+  uint private immutable roundPerYear;
 
   /************************************************
    *  EVENTS
@@ -96,15 +95,14 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
    */
   constructor(
     address _feeRecipient,
-    uint _managementFee,
-    uint _performanceFee,
+    uint _roundDuration,
     string memory _tokenName,
     string memory _tokenSymbol,
     Vault.VaultParams memory _vaultParams
   ) ERC20(_tokenName, _tokenSymbol) {
     feeRecipient = _feeRecipient;
-    performanceFee = _performanceFee;
-    managementFee = _managementFee.mul(Vault.FEE_MULTIPLIER).div(WEEKS_PER_YEAR);
+    uint _roundPerYear = uint(365 days).mul(Vault.FEE_MULTIPLIER).div(_roundDuration);
+    roundPerYear = _roundPerYear;
     vaultParams = _vaultParams;
 
     uint assetBalance = IERC20(vaultParams.asset).balanceOf(address(this));
@@ -136,8 +134,8 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
 
     emit ManagementFeeSet(managementFee, newManagementFee);
 
-    // We are dividing annualized management fee by num weeks in a year
-    managementFee = newManagementFee.mul(Vault.FEE_MULTIPLIER).div(WEEKS_PER_YEAR);
+    // We are dividing annualized management fee by number of rounds in a year
+    managementFee = newManagementFee.mul(Vault.FEE_MULTIPLIER).div(roundPerYear);
   }
 
   /**
@@ -296,7 +294,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
     // This checks if there is a withdrawal
     require(withdrawalShares > 0, "Not initiated");
 
-    require(withdrawalRound < vaultState.round, "Round not closed");
+    require(withdrawalRound < vaultState.round, "Round in progress");
 
     // We leave the round number as non-zero to save on gas for subsequent writes
     withdrawals[msg.sender].shares = 0;
@@ -373,24 +371,6 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
   /************************************************
    *  VAULT OPERATIONS
    ***********************************************/
-
-  /*
-   * @notice Helper function that helps to save gas for writing values into the roundPricePerShare map.
-   *         Writing `1` into the map makes subsequent writes warm, reducing the gas from 20k to 5k.
-   *         Having 1 initialized beforehand will not be an issue as long as we round down share calculations to 0.
-   * @param numRounds is the number of rounds to initialize in the map
-   */
-  // function initRounds(uint numRounds) external nonReentrant {
-  //   require(numRounds > 0, "!numRounds");
-
-  //   uint _round = vaultState.round;
-  //   for (uint i = 0; i < numRounds; i++) {
-  //     uint index = _round + i;
-  //     require(index >= _round, "Overflow");
-  //     require(roundPricePerShare[index] == 0, "Initialized"); // AVOID OVERWRITING ACTUAL VALUES
-  //     roundPricePerShare[index] = ShareMath.PLACEHOLDER_UINT;
-  //   }
-  // }
 
   /*
    * @notice Helper function that performs most administrative tasks
@@ -493,7 +473,7 @@ contract BaseVault is ReentrancyGuard, Ownable, ERC20, Initializable {
   function shareBalances(address account) public view returns (uint heldByAccount, uint heldByVault) {
     Vault.DepositReceipt memory depositReceipt = depositReceipts[account];
 
-    if (depositReceipt.round < ShareMath.PLACEHOLDER_UINT) {
+    if (depositReceipt.round == 0) {
       return (balanceOf(account), 0);
     }
 

@@ -9,17 +9,7 @@ library Vault {
   // Fees are 6-decimal places. For example: 20 * 10**6 = 20%
   uint internal constant FEE_MULTIPLIER = 10**6;
 
-  // Premium discount has 1-decimal place. For example: 80 * 10**1 = 80%. Which represents a 20% discount.
-  uint internal constant PREMIUM_DISCOUNT_MULTIPLIER = 10;
-
-  // Otokens have 8 decimal places.
-  uint internal constant OTOKEN_DECIMALS = 8;
-
-  // Percentage of funds allocated to options is 2 decimal places. 10 * 10**2 = 10%
-  uint internal constant OPTION_ALLOCATION_MULTIPLIER = 10**2;
-
-  // Placeholder uint value to prevent cold writes
-  uint internal constant PLACEHOLDER_UINT = 1;
+  uint internal constant ROUND_DELAY = 1 days;
 
   struct VaultParams {
     // Token decimals for vault shares
@@ -47,6 +37,10 @@ library Vault {
     uint128 totalPending;
     // Amount locked for scheduled withdrawals;
     uint128 queuedWithdrawShares;
+    // The timestamp next round will be ready to start
+    uint nextRoundReadyTimestamp;
+    // true if the current round is in progress, false if the round is idle
+    bool roundInProgress;
   }
 
   struct DepositReceipt {
