@@ -1,11 +1,12 @@
 import '@eth-optimism/plugins/hardhat/compiler';
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-waffle';
+import '@typechain/hardhat';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import 'hardhat-contract-sizer';
 import 'hardhat-gas-reporter';
-import 'hardhat-typechain';
+import 'hardhat-tracer';
 import 'solidity-coverage';
 
 dotenv.config();
@@ -42,7 +43,7 @@ export default {
     },
   },
   solidity: {
-    version: '0.7.6',
+    version: '0.8.9',
     settings: {
       optimizer: {
         enabled: true,
@@ -50,10 +51,10 @@ export default {
       },
     },
   },
-  typechain: {
-    outDir: 'typechain',
-    target: 'ethers-v5',
-  },
+  // typechain: {
+  //   outDir: 'typechain',
+  //   target: 'ethers-v5',
+  // },
   contractSizer: {
     alphaSort: true,
   },

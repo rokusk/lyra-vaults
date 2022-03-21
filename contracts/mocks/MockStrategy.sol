@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.9;
 
-import {IVaultStrategy} from "../interfaces/IVaultStrategy.sol";
+// import {IVaultStrategy} from "../interfaces/IVaultStrategy.sol";
 
-contract MockStrategy is IVaultStrategy {
+contract MockStrategy {
   uint public mockedListingId;
   uint public mockedSize;
   uint public mockedMinPremium;
@@ -12,7 +12,7 @@ contract MockStrategy is IVaultStrategy {
 
   bool public isValid;
 
-  function setStrategy(bytes memory _strategyBytes) external override {
+  function setStrategy(bytes memory _strategyBytes) external {
     mockedStrategyBytes = _strategyBytes;
   }
 
@@ -36,7 +36,6 @@ contract MockStrategy is IVaultStrategy {
   function requestTrade()
     external
     view
-    override
     returns (
       uint listingId,
       uint size,
@@ -49,7 +48,7 @@ contract MockStrategy is IVaultStrategy {
   /**
    * @dev this should be executed after the vault execute trade on OptionMarket
    */
-  function checkPostTrade() external view override returns (bool) {
+  function checkPostTrade() external view returns (bool) {
     return isValid;
   }
 }
