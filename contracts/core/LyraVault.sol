@@ -8,6 +8,7 @@ import {OptionMarket} from "@lyrafinance/core/contracts/OptionMarket.sol";
 
 import {BaseVault} from "./BaseVault.sol";
 import {DeltaStrategy} from "../strategies/DeltaStrategy.sol";
+import {VaultAdapter} from "@lyrafinance/core/contracts/periphery/VaultAdapter.sol";
 import {ISynthetix} from "../interfaces/ISynthetix.sol";
 import {Vault} from "../libraries/Vault.sol";
 
@@ -70,14 +71,22 @@ contract LyraVault is Ownable, BaseVault {
   }
 
   /// @dev anyone can trigger a trade
-  function trade() external {
+  function trade(uint boardId) external {
     require(vaultState.roundInProgress, "round closed");
+
+    (VaultAdapter.Strike memory strike,
+    uint collateralToAdd,
+    uint setCollateralTo)
+      = strategy.getRequiredCollateral(boardId);
+
     // open a short call position on lyra and collect premium
     uint collateralBefore = IERC20(vaultParams.asset).balanceOf(address(this));
 
     // todo: detail strategy
     // perform trade through strategy
-    (uint realPremium, uint positionId) = strategy.doTrade();
+    (uint positionId, uint realPremium) = strategy.doTrade(
+      strike, 0, setCollateralTo, address(0)
+    );
 
     uint collateralAfter = IERC20(vaultParams.asset).balanceOf(address(this));
 
@@ -114,13 +123,16 @@ contract LyraVault is Ownable, BaseVault {
     vaultState.nextRoundReadyTimestamp = block.timestamp.add(Vault.ROUND_DELAY);
     vaultState.roundInProgress = false;
 
+    // todo: add check on whether options were settled.
+
     emit RoundClosed(vaultState.round, lockAmount);
   }
 
   /// @notice start the next round
-  function startNextRound() external {
+  function startNextRound(uint boardId) external {
     require(!vaultState.roundInProgress, "round opened");
     require(block.timestamp > vaultState.nextRoundReadyTimestamp, "CD");
+    require(strategy.isValidBoard(boardId), "invalid board");
 
     (uint lockedBalance, uint queuedWithdrawAmount) = _rollToNextRound(uint(lastQueuedWithdrawAmount));
 

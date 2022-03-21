@@ -5,23 +5,28 @@ pragma experimental ABIEncoderV2;
 // Hardhat
 import "hardhat/console.sol";
 
-// Vault Adapter
+// Lyra
 import {VaultAdapter} from "@lyrafinance/core/contracts/periphery/VaultAdapter.sol";
+import {OptionMarket} from "@lyrafinance/core/contracts/OptionMarket.sol";
+import {DecimalMath} from "@lyrafinance/core/contracts/synthetix/DecimalMath.sol";
+import {SignedDecimalMath} from "@lyrafinance/core/contracts/synthetix/SignedDecimalMath.sol";
 
-// Libraries
-import "../synthetix/SafeDecimalMath.sol";
-import "../synthetix/SignedSafeDecimalMath.sol";
 
 contract DeltaStrategy is VaultAdapter {
-  using SafeMath for uint;
-  using SafeDecimalMath for uint;
-  using SignedSafeMath for int;
-  using SignedSafeDecimalMath for int;
+  using DecimalMath for uint;
+  using SignedDecimalMath for int;
 
   address public immutable vault;
+  OptionMarket.OptionType public immutable optionType;
 
+  uint public lastTradeTimestamp;
+  uint public roundBoardId;
+  uint[] public activePositionIds;
+ 
   // example strategy detail
   struct DeltaStrategyDetail {
+    uint collatBuffer; // multiple of vaultAdapter.minCollateral(): 1.1 -> 110% * minCollat
+    uint collatPercent; // partial collateral: 0.9 -> 90% * fullCollat
     uint minTimeToExpiry;
     uint maxTimeToExpiry;
     int targetDelta;
@@ -34,8 +39,9 @@ contract DeltaStrategy is VaultAdapter {
 
   DeltaStrategyDetail public currentStrategy;
 
-  constructor(address _vault) VaultAdapter() {
+  constructor(address _vault, OptionMarket.OptionType _optionType) VaultAdapter() {
     vault = _vault;
+    optionType = _optionType;
   }
 
   /**
@@ -49,37 +55,91 @@ contract DeltaStrategy is VaultAdapter {
   }
 
   /**
+   * @dev convert size (denominated in standard sizes) to actual contract amount.
+   */
+  function getRequiredCollateral(uint boardId) external view onlyVault returns (Strike memory strike, uint collateralToAdd, uint setCollateralTo) {
+    // get market info/minCollat
+    require(isValidBoard(boardId), "invalid board");
+    uint sellAmount = currentStrategy.size;
+    ExchangeRateParams memory exchangeParams = getExchangeParams();
+    Strike memory strike = _chooseStrike(boardId);
+    uint minCollat = getMinCollateral(
+        optionType, 
+        strike.strikePrice, 
+        strike.expiry, 
+        exchangeParams.spotPrice, 
+        sellAmount);
+
+    // calculate required collat based on collatBuffer and collatPercent
+    uint minCollatWithBuffer = minCollat.multiplyDecimal(currentStrategy.collatBuffer);
+    uint targetCollat = optionType == OptionMarket.OptionType.SHORT_CALL_BASE
+      ? sellAmount.multiplyDecimal(currentStrategy.collatPercent)
+      : sellAmount.multiplyDecimal(currentStrategy.collatPercent)
+        .multiplyDecimal(exchangeParams.spotPrice);
+    
+    collateralToAdd = _max(minCollatWithBuffer, targetCollat);
+    setCollateralTo = 0; // todo: finish this
+  }
+
+  /**
    * request trade detail according to the strategy.
    */
-  function doTrade() external view returns (uint positionId, uint premium) {
-    // todo: check whether minInterval has passed
-    uint boardId = 1;
-    uint listingId = _getListing(boardId);
-    uint amount = _getTradeAmount();
-    uint minPremium = _getMinPremium(listingId);
+  // todo: need to store several positionIds, decide how to balance collateral
+  function doTrade(
+    Strike memory strike, 
+    uint positionId, 
+    uint setCollateralTo, 
+    address lyraRewardRecipient) 
+    external onlyVault returns (uint, uint) {
+    require(lastTradeTimestamp + currentStrategy.minInterval <= block.timestamp, 
+      "min time interval not passed");
 
-    premium = 100e18; // todo: fix
-    positionId = 1;
+    // get minimum expected premium based on minIv
+    uint minPremium = _getMinPremium(strike);
+
+    // ensure minimum premium is enforced
+    TradeInputParameters memory tradeParams = TradeInputParameters ({
+      strikeId: strike.id,
+      positionId: positionId, //todo: keep adding to existing position
+      iterations: 5, // this can be optimized
+      optionType: optionType,
+      amount: currentStrategy.size, //todo: allow to scale this down when not enough money? or just don't trade for now
+      setCollateralTo: setCollateralTo, // todo: need to adjust increment up...
+      minTotalCost: minPremium,
+      maxTotalCost: type(uint).max,
+      rewardRecipient: lyraRewardRecipient // set to zero address if don't want to wait for whitelist
+    });
+
+    // perform trade
+    TradeResult memory result = openPosition(tradeParams);
+    lastTradeTimestamp = block.timestamp;
+    return(result.positionId, result.totalCost);
   }
 
   /**
    * @dev this should be executed after the vault execute trade on OptionMarket
    */
-  function checkPostTrade() external pure returns (bool isValid) {
+  function checkPostTrade() external view onlyVault returns (bool isValid) {
+    // make sure taken/returned balances are correct
     isValid = true;
   }
 
-  function _getBoard() internal view returns (uint boardId) {
-    uint[] memory liveBoards = getLiveBoards();
+  function isValidBoard(uint boardId) public view returns (bool isValid) {
+    Board memory board = getBoard(boardId);
+    uint secondsToExpiry = _getSecondsToExpiry(board.expiry);
+    isValid = (secondsToExpiry >= currentStrategy.minTimeToExpiry 
+      && secondsToExpiry <= currentStrategy.maxTimeToExpiry)
+      ? true
+      : false;
   }
-
 
   /**
    * @dev get the target listing id to trade on.
    * with delta vault strategy, this will check whether board is valid and
    * loop through all listingIds until target delta is found
    */
-  function _getListing(uint boardId) internal view returns (uint listingId) {
+  function _chooseStrike(uint boardId) internal view returns (Strike memory strike) {
+    Strike memory strike;
     //todo: generalize to both calls/puts
     //todo: need to get accurate spot price
     // (uint id, uint expiry, uint boardIV, bool frozen) = optionMarket.optionBoards(boardId);
@@ -118,7 +178,6 @@ contract DeltaStrategy is VaultAdapter {
     // require(optimalListingId != 0, "Not able to find valid listing");
     // return optimalListingId;
 
-    return 1;
   }
 
   /**
@@ -126,49 +185,32 @@ contract DeltaStrategy is VaultAdapter {
    * param listingId lyra option listing id
    * param size size of trade in Lyra standard sizes
    */
-  function _getMinPremium(uint listingId) internal view returns (uint minPremium) {
-    // // todo: can we use lyraGlobals.skewAdjustmentFactor()?
-    // (, uint strike, uint skew, , , , , , , , uint boardId) = greekCache.listingCaches(listingId);
-    // (, uint expiry, uint boardIv, ) = optionMarket.optionBoards(boardId);
-    // uint timeToExpirySec = expiry.sub(block.timestamp);
-    // ILyraGlobals.PricingGlobals memory pricingGlobals = lyraGlobals.getPricingGlobals(address(optionMarket));
+  function _getMinPremium(Strike memory strike) internal view returns (uint minPremium) {
+    ExchangeRateParams memory exchangeParams = getExchangeParams();
+    (uint minCallPremium, uint minPutPremium) = getPurePremium(
+      _getSecondsToExpiry(strike.expiry), 
+      currentStrategy.minIv,
+      exchangeParams.spotPrice,
+      strike.strikePrice);
 
-    // uint impactedIv = _getImpactedIv(boardIv, skew, pricingGlobals.skewAdjustmentFactor);
-
-    // // getting pure black scholes price without Lyra/SNX fees
-    // (uint callPremium, uint putPremium) = blackScholes.optionPrices(
-    //   timeToExpirySec,
-    //   impactedIv,
-    //   pricingGlobals.spotPrice, //todo: need to generalize to any asset
-    //   strike, // todo: need to resolve stack too deep errors
-    //   pricingGlobals.rateAndCarry
-    // );
-
-    // minPremium = callPremium; // todo: generalize to calls and puts;
-    return 100e18;
+    minPremium = optionType ==  OptionMarket.OptionType.SHORT_PUT_QUOTE ? minPutPremium : minCallPremium;
   }
 
-  function _getImpactedIv(
-    uint boardIv,
-    uint skew,
-    uint skewAdjustmentFactor
-  ) internal view returns (uint impactedIv) {
-    uint orderMoveBaseIv = currentStrategy.size / 100;
-    uint baseIvSlip = boardIv.sub(orderMoveBaseIv);
-    uint skewSlip = skew.sub(skewAdjustmentFactor.multiplyDecimal(currentStrategy.size));
-    impactedIv = baseIvSlip.multiplyDecimal(skewSlip);
-  }
-
-  /**
-   * @dev convert size (denominated in standard sizes) to actual contract amount.
-   */
-  function _getTradeAmount() internal view returns (uint amount) {
-    // need to check if lyraGlobals.standardSize can be used instead to save on cost.
-    uint standardSize = 1;
-    amount = currentStrategy.size.multiplyDecimal(standardSize);
-  }
-
-  function abs(int val) internal pure returns (int) {
+  function _abs(int val) internal pure returns (int) {
     return val >= 0 ? val : -val;
+  }
+
+  function _max(uint x, uint y) internal pure returns (uint) {
+    return (x > y) ? x : y;
+  }
+
+  function _getSecondsToExpiry(uint expiry) internal view returns (uint) {
+    require(block.timestamp <= expiry, "timestamp expired");
+    return expiry - block.timestamp;
+  }
+
+  modifier onlyVault() virtual {
+    require(msg.sender == address(vault), "only Vault");
+    _;
   }
 }
