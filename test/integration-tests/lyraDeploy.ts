@@ -32,6 +32,8 @@ describe('Integration Test', () => {
   it('will pay out long calls', async () => {
     boardIds = await testSystem.optionMarket.getLiveBoards();
     strikeIds = await testSystem.optionMarket.getBoardStrikes(boardIds[0]);
+    const strike = await testSystem.optionMarket.getStrike(strikeIds[0]);
+    expect(strike.strikePrice).eq(lyraUtils.toBN('1500'));
 
     // One long call
     await testSystem.optionMarket.openPosition({
