@@ -1,13 +1,13 @@
 import '@eth-optimism/plugins/hardhat/compiler';
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-waffle';
+import '@typechain/hardhat';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import 'hardhat-contract-sizer';
 import 'hardhat-gas-reporter';
 import 'hardhat-tracer';
 import 'solidity-coverage';
-import '@typechain/hardhat';
 
 dotenv.config();
 
