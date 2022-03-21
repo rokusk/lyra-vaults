@@ -5,21 +5,20 @@ pragma experimental ABIEncoderV2;
 // Hardhat
 import "hardhat/console.sol";
 
-// Interfaces
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+// Vault Adapter
+import {VaultAdapter} from "@lyrafinance/core/contracts/periphery/VaultAdapter.sol";
 
 // Libraries
 import "../synthetix/SafeDecimalMath.sol";
 import "../synthetix/SignedSafeDecimalMath.sol";
 
-contract DeltaStrategy is Ownable {
+contract DeltaStrategy is VaultAdapter {
   using SafeMath for uint;
   using SafeDecimalMath for uint;
   using SignedSafeMath for int;
   using SignedSafeDecimalMath for int;
 
   address public immutable vault;
-  address public immutable optionMarket;
 
   // example strategy detail
   struct DeltaStrategyDetail {
@@ -35,9 +34,8 @@ contract DeltaStrategy is Ownable {
 
   DeltaStrategyDetail public currentStrategy;
 
-  constructor(address _vault, address _optionMarket) {
+  constructor(address _vault) VaultAdapter() {
     vault = _vault;
-    optionMarket = _optionMarket;
   }
 
   /**
@@ -70,6 +68,11 @@ contract DeltaStrategy is Ownable {
   function checkPostTrade() external pure returns (bool isValid) {
     isValid = true;
   }
+
+  function _getBoard() internal view returns (uint boardId) {
+    uint[] memory liveBoards = getLiveBoards();
+  }
+
 
   /**
    * @dev get the target listing id to trade on.
