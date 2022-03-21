@@ -1,92 +1,82 @@
+import { constants as lyraConstants, utils as lyraUtils } from '@lyrafinance/core';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { constants } from 'ethers';
 import { ethers } from 'hardhat';
-import { DeltaStrategy } from '../../../typechain';
-import { encodeDeltaStrategy } from './utils';
+import { DeltaStrategy } from '../../../typechain-types';
+import { DeltaStrategyDetailStruct } from '../../../typechain-types/DeltaStrategy';
 
-const HOUR_SEC = 60 * 60;
-const DAY_SEC = 24 * HOUR_SEC;
-const WEEK_SEC = 7 * DAY_SEC;
-const MONTH_SEC = 28 * DAY_SEC;
-const YEAR_SEC = 365 * DAY_SEC;
+const defaultDeltaStrategyDetail: DeltaStrategyDetailStruct = {
+  minTimeToExpiry: lyraConstants.DAY_SEC,
+  maxTimeToExpiry: lyraConstants.WEEK_SEC * 2,
+  targetDelta: lyraUtils.toBN('0.3'),
+  maxDeltaGap: lyraUtils.toBN('0.1'),
+  minIv: lyraUtils.toBN('0.5'),
+  maxIv: lyraUtils.toBN('0.1'),
+  size: lyraUtils.toBN('10'),
+  minInterval: lyraConstants.HOUR_SEC,
+};
 
-describe.skip('Delta Vault Strategy', async () => {
+describe('Delta Vault Strategy', async () => {
   let manager: SignerWithAddress;
   let randomUser: SignerWithAddress;
   let strategy: DeltaStrategy;
 
-  const minTimeToExpiry = ethers.BigNumber.from(DAY_SEC * 4);
-  const maxTimeToExpiry = ethers.BigNumber.from(DAY_SEC * 10);
-  const targetDelta = ethers.utils.parseUnits('0.25', 18);
-  const maxDeltaGap = ethers.utils.parseUnits('0.1', 18); // min delta=0.15 and max delta=0.35
-  const minIv = ethers.utils.parseUnits('0.5', 18); // minIV=50%
-  const maxIv = ethers.utils.parseUnits('1.5', 18); // maxIV=150%
-  const size = ethers.utils.parseUnits('1', 18); // 1 STANDARD SIZE PER TRADE
-  const minInterval = ethers.BigNumber.from(HOUR_SEC);
-
-  describe('setup roles', async () => {
+  before(async () => {
     const addresses = await ethers.getSigners();
     manager = addresses[0];
     randomUser = addresses[9];
+
+    strategy = (await (await ethers.getContractFactory('DeltaStrategy')).connect(manager).deploy(
+      ethers.constants.AddressZero, // vault
+      '0xCD8a1C3ba11CF5ECfa6267617243239504a98d90', // optionMarket
+    )) as DeltaStrategy;
   });
 
   describe('deployment', async () => {
-    it('deploy strategy', async () => {
-      const DeltaStrategy = await ethers.getContractFactory('DeltaStrategy');
-      strategy = (await DeltaStrategy.connect(manager).deploy(
-        ethers.constants.AddressZero, // vault
-        '0x5f3f1dBD7B74C6B46e8c44f98792A1dAf8d69154', // blackScholes
-        '0xCD8a1C3ba11CF5ECfa6267617243239504a98d90', // optionMarket
-        '0x2bdCC0de6bE1f7D2ee689a0342D76F52E8EFABa3', // greekCache
-      )) as DeltaStrategy;
-
+    it('deploys with correct vault and optionMarket addresses', async () => {
       expect(await strategy.vault()).to.be.eq(ethers.constants.AddressZero);
-      expect(await strategy.blackScholes()).to.be.eq('0x5f3f1dBD7B74C6B46e8c44f98792A1dAf8d69154');
       expect(await strategy.optionMarket()).to.be.eq('0xCD8a1C3ba11CF5ECfa6267617243239504a98d90');
-      expect(await strategy.greekCache()).to.be.eq('0x2bdCC0de6bE1f7D2ee689a0342D76F52E8EFABa3');
     });
   });
 
   describe('setStrategy', async () => {
     it('setting strategy should correctly update strategy variables', async () => {
-      const strategyBytes = DeltaStrategy
-      await strategy.connect(manager).setStrategy(strategyBytes);
+      await strategy.connect(manager).setStrategy(defaultDeltaStrategyDetail);
 
       const newStrategy = await strategy.currentStrategy();
-      expect(newStrategy.minTimeToExpiry).to.be.eq(ethers.BigNumber.from(DAY_SEC * 4));
-      expect(newStrategy.maxTimeToExpiry).to.be.eq(ethers.BigNumber.from(DAY_SEC * 10));
-      expect(newStrategy.targetDelta).to.be.eq(ethers.utils.parseUnits('0.25', 18));
-      expect(newStrategy.maxDeltaGap).to.be.eq(ethers.utils.parseUnits('0.1', 18));
-      expect(newStrategy.minIv).to.be.eq(ethers.utils.parseUnits('0.5', 18));
-      expect(newStrategy.maxIv).to.be.eq(ethers.utils.parseUnits('1.5', 18));
-      expect(newStrategy.size).to.be.eq(ethers.utils.parseUnits('1', 18));
-      expect(newStrategy.minInterval).to.be.eq(ethers.BigNumber.from(HOUR_SEC));
+      expect(newStrategy.minTimeToExpiry).to.be.eq(defaultDeltaStrategyDetail.minTimeToExpiry);
+      expect(newStrategy.maxTimeToExpiry).to.be.eq(defaultDeltaStrategyDetail.maxTimeToExpiry);
+      expect(newStrategy.targetDelta).to.be.eq(defaultDeltaStrategyDetail.targetDelta);
+      expect(newStrategy.maxDeltaGap).to.be.eq(defaultDeltaStrategyDetail.maxDeltaGap);
+      expect(newStrategy.minIv).to.be.eq(defaultDeltaStrategyDetail.minIv);
+      expect(newStrategy.maxIv).to.be.eq(defaultDeltaStrategyDetail.maxIv);
+      expect(newStrategy.size).to.be.eq(defaultDeltaStrategyDetail.size);
+      expect(newStrategy.minInterval).to.be.eq(defaultDeltaStrategyDetail.minInterval);
     });
 
     it('should revert if setStrategy is not called by owner', async () => {
-      await expect(strategy.connect(randomUser).setStrategy(constants.AddressZero)).to.be.revertedWith(
+      await expect(strategy.connect(randomUser).setStrategy(defaultDeltaStrategyDetail)).to.be.revertedWith(
         'Ownable: caller is not the owner',
       );
     });
   });
 
-  describe('requestTrade', async () => {
-    it('should return correct size, listing id, premium', async () => {
-      const boardId = ethers.BigNumber.from('1');
-      await strategy.connect(randomUser).requestTrade(boardId);
-      const { listingId, size, minPremium } = await strategy.requestTrade(boardId);
-      expect(listingId).to.be.eq(ethers.BigNumber.from('9'));
-      expect(minPremium).to.be.eq(ethers.utils.parseUnits('0', 18));
-      expect(size).to.be.eq(ethers.utils.parseUnits('1', 18));
-    });
-    // todo: test setStrategy allowable times
-  });
+  // describe('requestTrade', async () => {
+  //   it('should return correct size, listing id, premium', async () => {
+  //     const boardId = ethers.BigNumber.from('1');
+  //     await strategy.connect(randomUser).requestTrade(boardId);
+  //     const { listingId, size, minPremium } = await strategy.requestTrade(boardId);
+  //     expect(listingId).to.be.eq(ethers.BigNumber.from('9'));
+  //     expect(minPremium).to.be.eq(ethers.utils.parseUnits('0', 18));
+  //     expect(size).to.be.eq(ethers.utils.parseUnits('1', 18));
+  //   });
+  //   // todo: test setStrategy allowable times
+  // });
 
-  describe('checkPostTrade', async () => {
-    // todo: update test case
-    it('should return true if ...', async () => {
-      expect(await strategy.checkPostTrade()).to.be.true;
-    });
-  });
+  // describe('checkPostTrade', async () => {
+  //   // todo: update test case
+  //   it('should return true if ...', async () => {
+  //     expect(await strategy.checkPostTrade()).to.be.true;
+  //   });
+  // });
 });

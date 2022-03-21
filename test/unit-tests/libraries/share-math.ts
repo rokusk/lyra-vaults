@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { ShareMathTest } from '../../../typechain';
+import { ShareMathTest } from '../../../typechain-types';
 
 describe('Unit test: ShareMath Library', async () => {
   let tester: ShareMathTest;
