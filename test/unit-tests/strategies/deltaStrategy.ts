@@ -1,4 +1,4 @@
-import { constants as lyraConstants, utils as lyraUtils } from '@lyrafinance/core';
+import { lyraConstants, lyraUtils } from '@lyrafinance/core';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';

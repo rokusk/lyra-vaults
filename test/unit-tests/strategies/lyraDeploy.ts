@@ -1,4 +1,4 @@
-import { constants, evm, lyraMarkets, TestSystemContractsType, utils } from '@lyrafinance/core';
+import { lyraConstants, lyraEvm, lyraMarkets, TestSystemContractsType, lyraUtils } from '@lyrafinance/core';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import chai, { expect } from 'chai';
 import { solidity } from 'ethereum-waffle';
@@ -22,11 +22,11 @@ describe('Integration Test', () => {
   });
 
   beforeEach(async () => {
-    snap = await evm.takeSnapshot();
+    snap = await lyraEvm.takeSnapshot();
   });
 
   afterEach(async () => {
-    await evm.restoreSnapshot(snap);
+    await lyraEvm.restoreSnapshot(snap);
   });
 
   it('will pay out long calls', async () => {
@@ -37,23 +37,23 @@ describe('Integration Test', () => {
     await testSystem.optionMarket.openPosition({
       strikeId: strikeIds[0],
       positionId: 0,
-      amount: utils.toBN('1'),
+      amount: lyraUtils.toBN('1'),
       setCollateralTo: 0,
       iterations: 1,
       minTotalCost: 0,
-      maxTotalCost: constants.MAX_UINT,
+      maxTotalCost: lyraConstants.MAX_UINT,
       optionType: lyraMarkets.OptionType.LONG_CALL,
     });
 
-    await evm.fastForward(constants.MONTH_SEC);
-    await testSystem.mockSNX.exchangeRates.mockLatestPrice(utils.toBN('2000'));
+    await lyraEvm.fastForward(lyraConstants.MONTH_SEC);
+    await testSystem.mockSNX.exchangeRates.mockLatestPrice(lyraUtils.toBN('2000'));
 
     await testSystem.optionMarket.settleExpiredBoard(boardIds[0]);
-    expect(await testSystem.liquidityPool.totalOutstandingSettlements()).to.eq(utils.toBN('500'));
+    expect(await testSystem.liquidityPool.totalOutstandingSettlements()).to.eq(lyraUtils.toBN('500'));
 
     const preBalance = await testSystem.mockSNX.quoteAsset.balanceOf(account.address);
     await testSystem.shortCollateral.settleOptions([strikeIds[0]]);
     const postBalance = await testSystem.mockSNX.quoteAsset.balanceOf(account.address);
-    expect(postBalance.sub(preBalance)).to.eq(utils.toBN('500'));
+    expect(postBalance.sub(preBalance)).to.eq(lyraUtils.toBN('500'));
   });
 });
