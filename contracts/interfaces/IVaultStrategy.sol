@@ -1,19 +1,33 @@
 //SPDX-License-Identifier:MIT
-pragma solidity ^0.7.6;
-
-import {IOptionMarket} from "./IOptionMarket.sol";
+pragma solidity ^0.8.9;
 
 interface IVaultStrategy {
-  function setStrategy(bytes memory strategyBytes) external;
+  struct DeltaStrategyDetail {
+    uint minTimeToExpiry;
+    uint maxTimeToExpiry;
+    int targetDelta;
+    int maxDeltaGap;
+    uint minIv;
+    uint maxIv;
+    uint size;
+    uint minInterval;
+  }
 
-  function requestTrade()
-    external
-    view
-    returns (
-      uint listingId,
-      uint amount,
-      uint minPremium
-    );
+  ///////////
+  // Admin //
+  ///////////
+
+  function setStrategy(DeltaStrategyDetail memory _deltaStrategy) external;
+
+  ///////////
+  // Trade //
+  ///////////
+
+  function doTrade() external view returns (uint realPremium, uint positionId);
 
   function checkPostTrade() external view returns (bool);
+
+  //////////////
+  // Internal //
+  //////////////
 }

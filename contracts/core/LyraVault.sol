@@ -1,14 +1,13 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
-pragma abicoder v2;
+pragma solidity ^0.8.9;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import {OptionMarket} from "@lyrafinance/core/contracts/OptionMarket.sol";
 
 import {BaseVault} from "./BaseVault.sol";
-import {IVaultStrategy} from "../interfaces/IVaultStrategy.sol";
-import {IOptionMarket} from "../interfaces/IOptionMarket.sol";
+import {DeltaStrategy} from "../strategies/DeltaStrategy.sol";
 import {ISynthetix} from "../interfaces/ISynthetix.sol";
 import {Vault} from "../libraries/Vault.sol";
 
@@ -16,11 +15,11 @@ import {Vault} from "../libraries/Vault.sol";
 contract LyraVault is Ownable, BaseVault {
   using SafeMath for uint;
 
-  IOptionMarket public immutable optionMarket;
+  OptionMarket public immutable optionMarket;
 
   ISynthetix public immutable synthetix;
 
-  IVaultStrategy public strategy;
+  DeltaStrategy public strategy;
 
   // Amount locked for scheduled withdrawals last week;
   uint128 public lastQueuedWithdrawAmount;
@@ -35,7 +34,7 @@ contract LyraVault is Ownable, BaseVault {
 
   event StrategyUpdated(address strategy);
 
-  event Trade(address user, uint contractSize, uint collateralAmount, uint listingId, uint premium);
+  event Trade(address user, uint positionId, uint premium);
 
   event RoundStarted(uint16 roundId, uint104 lockAmount);
 
@@ -53,34 +52,33 @@ contract LyraVault is Ownable, BaseVault {
     bytes32 _premiumCurrencyKey,
     bytes32 _sETHCurrencyKey
   ) BaseVault(_feeRecipient, _roundDuration, _tokenName, _tokenSymbol, _vaultParams) {
-    optionMarket = IOptionMarket(_optionMarket);
+    optionMarket = OptionMarket(_optionMarket);
     synthetix = ISynthetix(_synthetix);
-    IERC20(_vaultParams.asset).approve(_optionMarket, uint(-1));
+    IERC20(_vaultParams.asset).approve(_optionMarket, type(uint).max);
 
     premiumCurrencyKey = _premiumCurrencyKey;
     sETHCurrencyKey = _sETHCurrencyKey;
 
     // allow synthetix to trade sUSD for sETH
-    IERC20(_susd).approve(_synthetix, uint(-1));
+    IERC20(_susd).approve(_synthetix, type(uint).max);
   }
 
   /// @dev set strategy contract. This function can only be called by owner.
   function setStrategy(address _strategy) external onlyOwner {
-    strategy = IVaultStrategy(_strategy);
+    strategy = DeltaStrategy(_strategy);
     emit StrategyUpdated(_strategy);
   }
 
   /// @dev anyone can trigger a trade
   function trade() external {
     require(vaultState.roundInProgress, "round closed");
-    // get trade detail from strategy
-    (uint listingId, uint amount, uint minPremium) = strategy.requestTrade();
-
     // open a short call position on lyra and collect premium
     uint collateralBefore = IERC20(vaultParams.asset).balanceOf(address(this));
 
-    // todo: update to Avalon interface
-    uint realPremium = optionMarket.openPosition(listingId, IOptionMarket.TradeType.SHORT_CALL, amount);
+    // todo: detail strategy
+    // perform trade through strategy
+    (uint realPremium, uint positionId) = strategy.doTrade();
+
     uint collateralAfter = IERC20(vaultParams.asset).balanceOf(address(this));
 
     uint assetUsed = collateralBefore.sub(collateralAfter);
@@ -88,14 +86,15 @@ contract LyraVault is Ownable, BaseVault {
     // update the remaining locked amount
     vaultState.lockedAmountLeft = vaultState.lockedAmountLeft.sub(assetUsed);
 
-    require(realPremium >= minPremium, "premium too low");
+    // require(realPremium >= minPremium, "premium too low");
 
     require(strategy.checkPostTrade(), "bad trade");
 
     // exhcnage sUSD to sETH
     synthetix.exchange(premiumCurrencyKey, realPremium, sETHCurrencyKey);
 
-    emit Trade(msg.sender, amount, assetUsed, listingId, realPremium);
+    // todo: udpate events
+    emit Trade(msg.sender, positionId, realPremium);
   }
 
   /// @notice settle outstanding short positions.
@@ -104,9 +103,6 @@ contract LyraVault is Ownable, BaseVault {
   function settle(uint[] memory listingIds) external {
     // eth call options are settled in eth
     // todo: update to Avalon interface
-    for (uint i = 0; i < listingIds.length; i++) {
-      optionMarket.settleOptions(listingIds[i], IOptionMarket.TradeType.SHORT_CALL);
-    }
   }
 
   /// @dev close the current round, enable user to deposit for the next round
