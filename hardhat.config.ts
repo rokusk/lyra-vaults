@@ -6,8 +6,8 @@ import * as fs from 'fs';
 import 'hardhat-contract-sizer';
 import 'hardhat-gas-reporter';
 import 'hardhat-tracer';
-import 'hardhat-typechain';
 import 'solidity-coverage';
+import '@typechain/hardhat';
 
 dotenv.config();
 
@@ -51,10 +51,10 @@ export default {
       },
     },
   },
-  typechain: {
-    outDir: 'typechain',
-    target: 'ethers-v5',
-  },
+  // typechain: {
+  //   outDir: 'typechain',
+  //   target: 'ethers-v5',
+  // },
   contractSizer: {
     alphaSort: true,
   },

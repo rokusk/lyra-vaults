@@ -6,7 +6,8 @@ node_modules
 #Hardhat config
 cache
 artifacts
-typechain
+typechain-types
+dist/
 .vscode/
 
 # hardhat coverage
