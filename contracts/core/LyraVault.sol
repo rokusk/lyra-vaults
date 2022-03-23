@@ -24,6 +24,7 @@ contract LyraVault is Ownable, BaseVault {
   IERC20 public immutable collateralAsset;
 
   DeltaStrategy public strategy;
+  address public lyraRewardRecipient;
 
   // Amount locked for scheduled withdrawals last week;
   uint128 public lastQueuedWithdrawAmount;
@@ -67,6 +68,7 @@ contract LyraVault is Ownable, BaseVault {
     // allow synthetix to trade sUSD for sETH
     collateralAsset.approve(_optionMarket, type(uint).max);
     premiumCurrencyKey.approve(_synthetix, type(uint).max);
+
   }
 
   /// @dev set strategy contract. This function can only be called by owner.
@@ -76,20 +78,19 @@ contract LyraVault is Ownable, BaseVault {
   }
 
   /// @dev anyone can trigger a trade
-  function trade(uint boardId) external {
+  function trade(uint strikeId) external {
     require(vaultState.roundInProgress, "round closed");
 
-    (VaultAdapter.Strike memory strike,
-    uint collateralToAdd)
-      = strategy.getRequiredCollateral(boardId);
+    uint collateralToAdd = strategy.getRequiredCollateral(strikeId);
 
     // open a short call position on lyra and collect premium
     uint collateralBefore = IERC20(vaultParams.asset).balanceOf(address(this));
+    require(IERC20(vaultParams.asset).transfer(address(strategy), collateralToAdd),
+      "collateral transfer to strategy failed");
 
-    // todo: detail strategy
     // perform trade through strategy
     (uint positionId, uint realPremium) = strategy.doTrade(
-      strike, collateralToAdd, address(0)
+      strike, collateralToAdd, lyraRewardRecipient
     );
 
     uint collateralAfter = IERC20(vaultParams.asset).balanceOf(address(this));
@@ -99,19 +100,12 @@ contract LyraVault is Ownable, BaseVault {
     // update the remaining locked amount
     vaultState.lockedAmountLeft = vaultState.lockedAmountLeft.sub(assetUsed);
 
-    // require(realPremium >= minPremium, "premium too low");
-
-    require(strategy.checkPostTrade(), "bad trade");
-
-    // exhcnage sUSD to sETH
-    synthetix.exchange(premiumCurrencyKey, realPremium, sETHCurrencyKey);
-
     // todo: udpate events
     emit Trade(msg.sender, positionId, realPremium);
   }
 
-  function balanceCollateral() external {
-    return true;
+  function reducePosition(uint positionId) external {
+    strategy.reducePosition(positionId, lyraRewardRecipient);
   }
 
   /// @notice settle outstanding short positions.
@@ -131,6 +125,9 @@ contract LyraVault is Ownable, BaseVault {
     vaultState.nextRoundReadyTimestamp = block.timestamp.add(Vault.ROUND_DELAY);
     vaultState.roundInProgress = false;
 
+    // won't be able to close if positions are not settled
+    strategy.returnFundsAndClearStrikes();
+
     // todo: add check on whether options were settled.
 
     emit RoundClosed(vaultState.round, lockAmount);
@@ -141,8 +138,7 @@ contract LyraVault is Ownable, BaseVault {
     require(!vaultState.roundInProgress, "round opened");
     require(block.timestamp > vaultState.nextRoundReadyTimestamp, "CD");
 
-    strategy.setBoardAndClearStrikes(boardId);
-    strategy.returnAllFunds();
+    strategy.setBoard(boardId);
 
     (uint lockedBalance, uint queuedWithdrawAmount) = _rollToNextRound(uint(lastQueuedWithdrawAmount));
 
@@ -153,6 +149,11 @@ contract LyraVault is Ownable, BaseVault {
 
     emit RoundStarted(vaultState.round, uint104(lockedBalance));
   }
+
+  function setLyraRewardRecipient(address recipient) external onlyOwner {
+    lyraRewardRecipient = recipient;
+  }
+
 
   // need setRewardRecipient
 }
