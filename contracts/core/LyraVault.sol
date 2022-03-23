@@ -9,7 +9,6 @@ import {OptionMarket} from "@lyrafinance/core/contracts/OptionMarket.sol";
 import {BaseVault} from "./BaseVault.sol";
 import {DeltaStrategy} from "../strategies/DeltaStrategy.sol";
 import {VaultAdapter} from "@lyrafinance/core/contracts/periphery/VaultAdapter.sol";
-import {ISynthetix} from "../interfaces/ISynthetix.sol";
 import {Vault} from "../libraries/Vault.sol";
 
 /// @notice LyraVault help users run option-selling strategies on Lyra AMM.
@@ -17,8 +16,6 @@ contract LyraVault is Ownable, BaseVault {
   using SafeMath for uint;
 
   OptionMarket public immutable optionMarket;
-
-  ISynthetix public immutable synthetix;
 
   IERC20 public immutable premiumAsset;
   IERC20 public immutable collateralAsset;
@@ -49,7 +46,6 @@ contract LyraVault is Ownable, BaseVault {
     address _optionMarket,
     address _susd,
     address _feeRecipient,
-    address _synthetix,
     uint _roundDuration,
     string memory _tokenName,
     string memory _tokenSymbol,
@@ -58,17 +54,11 @@ contract LyraVault is Ownable, BaseVault {
     bytes32 _sETHCurrencyKey
   ) BaseVault(_feeRecipient, _roundDuration, _tokenName, _tokenSymbol, _vaultParams) {
     optionMarket = OptionMarket(_optionMarket);
-    synthetix = ISynthetix(_synthetix);
     premiumAsset = IERC20(_susd);
     collateralAsset = IERC20(_vaultParams.asset);
 
     premiumCurrencyKey = _premiumCurrencyKey;
     sETHCurrencyKey = _sETHCurrencyKey;
-
-    // allow synthetix to trade sUSD for sETH
-    collateralAsset.approve(_optionMarket, type(uint).max);
-    premiumCurrencyKey.approve(_synthetix, type(uint).max);
-
   }
 
   /// @dev set strategy contract. This function can only be called by owner.
@@ -90,7 +80,7 @@ contract LyraVault is Ownable, BaseVault {
 
     // perform trade through strategy
     (uint positionId, uint realPremium) = strategy.doTrade(
-      strike, collateralToAdd, lyraRewardRecipient
+      strikeId, collateralToAdd, lyraRewardRecipient
     );
 
     uint collateralAfter = IERC20(vaultParams.asset).balanceOf(address(this));

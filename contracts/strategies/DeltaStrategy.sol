@@ -33,7 +33,7 @@ contract DeltaStrategy is VaultAdapter {
     uint minTimeToExpiry;
     uint maxTimeToExpiry;
     int targetDelta;
-    int maxDeltaGap;
+    uint maxDeltaGap;
     uint minVol;
     uint maxVol;
     uint size;
@@ -76,17 +76,19 @@ contract DeltaStrategy is VaultAdapter {
   }
 
   function returnFundsAndClearStrikes() external onlyVault {
+    ExchangeRateParams memory exchangeParams = getExchangeParams();
     uint quoteBal = quoteAsset.balanceOf(address(this));
     uint baseBal = baseAsset.balanceOf(address(this));
 
+    uint quoteReceived = 0;
     if (_isBaseCollat()) {
-      exchangeToBase(amountBase, quoteBal)
+      // todo: double check this
+      uint minQuoteExpected = baseBal
+        .multiplyDecimal(exchangeParams.spotPrice)
+        .multiplyDecimal(DecimalMath.UNIT - exchangeParams.baseQuoteFeeRate); 
+      quoteReceived = exchangeFromExactBase(baseBal, minQuoteExpected);
     }
-
-    quoteAsset.transfer(vault, quoteBal);
-    baseAsset.transfer(vault, baseBal);
-
-
+    require(quoteAsset.transfer(vault, quoteBal + quoteReceived), "failed to return funds from strategy");
 
     _clearAllActiveStrikes();
   }
@@ -97,7 +99,7 @@ contract DeltaStrategy is VaultAdapter {
   function getRequiredCollateral(uint strikeId) 
     external view 
     returns (uint requiredCollat) {
-    Strike memory strike = getStrikes([strikeId])[0];
+    Strike memory strike = getStrikes(_toDynamic(strikeId))[0];
     uint sellAmount = currentStrategy.size;
     ExchangeRateParams memory exchangeParams = getExchangeParams();
     
@@ -119,16 +121,17 @@ contract DeltaStrategy is VaultAdapter {
     uint collateralToAdd, 
     address lyraRewardRecipient) 
     external onlyVault returns (uint, uint) {
-    Strike memory strike = getStrikes([strikeId])[0];
-    require(lastTradeTimestamp + currentStrategy.minInterval <= block.timestamp, 
+    Strike memory strike = getStrikes(_toDynamic(strikeId))[0];
+    require(lastTradeTimestamp + currentStrategy.minTradeInterval <= block.timestamp, 
       "min time interval not passed");
     require(isValidStrike(strike), "invalid strike");
 
     // get minimum expected premium based on minIv
     uint minExpectedPremium = _getPremiumLimit(strike, true);
     uint existingCollateral = 0;
-    if (_isActiveStrike(strike)) {
-      OptionToken.PositionWithOwner position = getPositions([strikeToPositionId[strikeId]])[0];
+    if (_isActiveStrike(strike.id)) {
+      OptionToken.PositionWithOwner memory position = getPositions(
+          _toDynamic(strikeToPositionId[strikeId]))[0];
       uint existingCollateral = position.collateral;
     }
 
@@ -158,8 +161,8 @@ contract DeltaStrategy is VaultAdapter {
   }
 
   function reducePosition(uint positionId, address lyraRewardRecipient) external onlyVault {
-    OptionToken.PositionWithOwner position = getPositions([positionId])[0];
-    Strike memory strike = getStrikes([position.strikeId])[0];
+    OptionToken.PositionWithOwner memory position = getPositions(_toDynamic(positionId))[0];
+    Strike memory strike = getStrikes(_toDynamic(position.strikeId))[0];
     ExchangeRateParams memory exchangeParams = getExchangeParams();
 
     require(strikeToPositionId[position.strikeId] != positionId, "invalid positionId");
@@ -220,10 +223,11 @@ contract DeltaStrategy is VaultAdapter {
    * loop through all listingIds until target delta is found
    */
   function isValidStrike(Strike memory strike) public view returns (bool isValid) {
-    uint vol = getVols([strike.id])[0];
-    uint delta = _isCall()
-      ? getDeltas([strike.id])[0] - SignedDecimalMath.UNIT
-      : getDeltas([strike.id])[0];
+    uint[] memory strikeId = _toDynamic(strike.id);
+    uint vol = getVols(strikeId)[0];
+    int delta = _isCall()
+      ? getDeltas(strikeId)[0] - SignedDecimalMath.UNIT
+      : getDeltas(strikeId)[0];
 
     uint deltaGap = _abs(currentStrategy.targetDelta - delta);
 
@@ -234,8 +238,6 @@ contract DeltaStrategy is VaultAdapter {
     } else {
       return false;
     }
-
-    return getStrikes([strike.id])[0];
   }
 
   function _getRequiredCollateral(
@@ -300,7 +302,7 @@ contract DeltaStrategy is VaultAdapter {
   function _clearAllActiveStrikes() internal {
     // todo: take care of i = 0 case
     for (uint i = 0; i < activeStrikeIds.length; i++) {
-      OptionToken.PositionWithOwner position = getPositions([strikeToPositionId[i]])[0];
+      OptionToken.PositionWithOwner memory position = getPositions(_toDynamic(strikeToPositionId[i]))[0];
       require(position.state != OptionToken.PositionState.ACTIVE, "cannot clear active position");
       delete strikeToPositionId[i];
     }
@@ -341,6 +343,12 @@ contract DeltaStrategy is VaultAdapter {
   function _getSecondsToExpiry(uint expiry) internal view returns (uint) {
     require(block.timestamp <= expiry, "timestamp expired");
     return expiry - block.timestamp;
+  }
+
+  // temporary fix - eth core devs promised Q2 2022 fix
+  function _toDynamic(uint val) internal pure returns (uint[] memory dynamicArray) {
+    dynamicArray = new uint[](1); 
+    dynamicArray[0] = val;
   }
 
   modifier onlyVault() virtual {
