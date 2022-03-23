@@ -132,7 +132,7 @@ contract DeltaStrategy is VaultAdapter {
     if (_isActiveStrike(strike.id)) {
       OptionToken.PositionWithOwner memory position = getPositions(
           _toDynamic(strikeToPositionId[strikeId]))[0];
-      uint existingCollateral = position.collateral;
+      existingCollateral = position.collateral;
     }
 
     // perform trade
@@ -292,7 +292,7 @@ contract DeltaStrategy is VaultAdapter {
   }
 
   function _addActiveStrike(Strike memory strike, uint tradedPositionId) 
-    internal returns (uint currentPositionId) {
+    internal {
     if (!_isActiveStrike(strike.id)) {
       strikeToPositionId[strike.id] = tradedPositionId;
       activeStrikeIds.push(strike.id);
