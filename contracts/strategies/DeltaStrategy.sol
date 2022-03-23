@@ -103,11 +103,16 @@ contract DeltaStrategy is VaultAdapter {
     uint sellAmount = currentStrategy.size;
     ExchangeRateParams memory exchangeParams = getExchangeParams();
     
-    requiredCollat = _getRequiredCollateral(
+    uint minBufferCollateral = _getBufferCollateral(
       strike.strikePrice, 
       strike.expiry, 
       exchangeParams.spotPrice, 
       sellAmount);
+
+    uint targetCollat = _getFullCollateral(strike.strikePrice, sellAmount)
+      .multiplyDecimal(currentStrategy.collatPercent);
+    
+    requiredCollat = _max(minBufferCollateral, targetCollat);
   }
 
   /**
@@ -172,7 +177,7 @@ contract DeltaStrategy is VaultAdapter {
       "min time interval not passed");
     
     // only allows closing if collat < minBuffer
-    uint minCollatPerAmount = _getRequiredCollateral(
+    uint minCollatPerAmount = _getBufferCollateral(
       strike.strikePrice, 
       strike.expiry, 
       exchangeParams.spotPrice, 
@@ -240,13 +245,22 @@ contract DeltaStrategy is VaultAdapter {
     }
   }
 
-  function _getRequiredCollateral(
+  function _getFullCollateral(
     uint strikePrice, 
-    uint expiry, 
-    uint spotPrice, 
-    uint amount) 
-    internal view returns (uint requiredCollat) {
+    uint amount)
+    internal view returns (uint fullCollat) {
     // calculate required collat based on collatBuffer and collatPercent
+    fullCollat = _isBaseCollat()
+      ? amount
+      : amount.multiplyDecimal(strikePrice);
+  }
+
+function _getBufferCollateral(
+  uint strikePrice, 
+  uint expiry, 
+  uint spotPrice, 
+  uint amount)
+  internal view returns (uint) {
     uint minCollat = getMinCollateral(
         optionType, 
         strikePrice, 
@@ -255,15 +269,10 @@ contract DeltaStrategy is VaultAdapter {
         amount);
     uint minCollatWithBuffer = minCollat.multiplyDecimal(currentStrategy.collatBuffer);
 
-    uint fullCollat = _isBaseCollat()
-      ? amount
-      : amount.multiplyDecimal(spotPrice);
+    uint fullCollat = _getFullCollateral(strikePrice, amount);
 
-    uint targetCollat = fullCollat.multiplyDecimal(currentStrategy.collatPercent);
-    
-    // make sure never exceeds full collat
-    requiredCollat = _min(fullCollat, _max(minCollatWithBuffer, targetCollat));
-}
+    return _min(minCollatWithBuffer, fullCollat);
+  }
 
   /**
    * @dev get minimum premium that the vault should receive.
