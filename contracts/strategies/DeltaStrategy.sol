@@ -50,6 +50,9 @@ contract DeltaStrategy is VaultAdapter {
   constructor(address _vault, OptionMarket.OptionType _optionType) VaultAdapter() {
     vault = _vault;
     optionType = _optionType;
+
+    quoteAsset.approve(vault, type(uint).max);
+    baseAsset.approve(vault, type(uint).max);
   }
 
   /**
@@ -73,32 +76,28 @@ contract DeltaStrategy is VaultAdapter {
     activeExpiry = board.expiry;
   }
 
-  function convertAndReturnPremium() external onlyVault {
-    return;
+  function returnAllFunds() external onlyVault {
+    uint quoteBal = quoteAsset.balanceOf(address(this));
+    uint baseBal = baseAsset.balanceOf(address(this));
+    quoteAsset.transfer(vault, quoteBal);
+    baseAsset.transfer(vault, baseBal);
   }
 
   /**
    * @dev convert size (denominated in standard sizes) to actual contract amount.
    */
   function getRequiredCollateral(uint strikeId) 
-    external view onlyVault 
-    returns (Strike memory strike, uint collateralToAdd) {
-    // get market info/minCollat
-
+    external view 
+    returns (uint requiredCollat) {
     Strike memory strike = getStrikes([strikeId])[0];
-    require(isValidStrike(strike), "invalid strike");
     uint sellAmount = currentStrategy.size;
     ExchangeRateParams memory exchangeParams = getExchangeParams();
-
-    // get collat with buffer and target collat
-    uint minCollatWithBuffer = _getMinCollateralWithBuffer(
-      strike.strikePrice, strike.expiry, exchangeParams.spotPrice, sellAmount);
-    uint targetCollat = optionType == OptionMarket.OptionType.SHORT_CALL_BASE
-      ? sellAmount.multiplyDecimal(currentStrategy.collatPercent)
-      : sellAmount.multiplyDecimal(currentStrategy.collatPercent)
-        .multiplyDecimal(exchangeParams.spotPrice);
     
-    collateralToAdd = _max(minCollatWithBuffer, targetCollat);
+    requiredCollat = _getRequiredCollateral(
+      strike.strikePrice, 
+      strike.expiry, 
+      exchangeParams.spotPrice, 
+      sellAmount);
   }
 
   /**
@@ -106,15 +105,14 @@ contract DeltaStrategy is VaultAdapter {
    */
   // todo: need to store several positionIds, decide how to balance collateral
   function doTrade(
-    Strike memory strike, 
+    uint strikeId, 
     uint collateralToAdd, 
     address lyraRewardRecipient) 
     external onlyVault returns (uint, uint) {
-    // somewhere here require that vault retains certain amount of base or quote
-
+    Strike memory strike = getStrikes([strikeId])[0];
     require(lastTradeTimestamp + currentStrategy.minInterval <= block.timestamp, 
       "min time interval not passed");
-
+    require(isValidStrike(strike), "invalid strike");
 
     // get minimum expected premium based on minIv
     uint minExpectedPremium = _getPremiumLimit(strike, true);
@@ -129,7 +127,7 @@ contract DeltaStrategy is VaultAdapter {
     TradeInputParameters memory tradeParams = TradeInputParameters ({
       strikeId: strike.id,
       positionId: strikeToPositionId[strike.id],
-      iterations: 5, // todo: optimize
+      iterations: 3,
       optionType: optionType,
       amount: currentStrategy.size,
       setCollateralTo: existingCollateral + collateralToAdd,
@@ -145,14 +143,8 @@ contract DeltaStrategy is VaultAdapter {
     // update active strikes
     _addActiveStrike(strike, result.positionId);
 
-    // convert back to base
-
-
-    // check balances and return to vault
+    // check balances and keep premiums in vault in case reducePosition() is called
     _checkPostTrade(initialBalance, minExpectedPremium, collateralToAdd);
-
-    // convert back to base if call and return to vault
-
 
     return(result.positionId, result.totalCost);
   }
@@ -169,7 +161,7 @@ contract DeltaStrategy is VaultAdapter {
       "min time interval not passed");
     
     // only allows closing if collat < minBuffer
-    uint minCollatPerAmount = _getMinCollateralWithBuffer(
+    uint minCollatPerAmount = _getRequiredCollateral(
       strike.strikePrice, 
       strike.expiry, 
       exchangeParams.spotPrice, 
@@ -178,12 +170,13 @@ contract DeltaStrategy is VaultAdapter {
       "position properly collateralized");
 
     // closes excess position with premium balance
-    TradeInputParameters memory tradeParams = TradeInputParameters ({
+    uint closeAmount = position.amount - position.collateral.divideDecimal(minCollatPerAmount);
+    TradeInputParameters memory tradeParams = TradeInputParameters({
       strikeId: position.strikeId,
       positionId: position.positionId,
       iterations: 3,
       optionType: optionType,
-      amount: position.amount - position.collateral.divideDecimal(minCollatPerAmount),
+      amount: closeAmount,
       setCollateralTo: position.collateral,
       minTotalCost: type(uint).min,
       maxTotalCost: _getPremiumLimit(strike, false),
@@ -193,6 +186,12 @@ contract DeltaStrategy is VaultAdapter {
     lastAdjustmentTimestamp = block.timestamp;
 
     // return remaining balance (what about... if put or quote collat)
+    if (optionType == OptionMarket.OptionType.SHORT_CALL_BASE) {
+      uint currentBal = baseAsset.balanceOf(address(this));
+      baseAsset.transfer(vault, currentBal);
+    } else { // quote collateral
+      baseAsset.transfer(vault, closeAmount);
+    }
 
     return true;
   }
@@ -235,17 +234,29 @@ contract DeltaStrategy is VaultAdapter {
   }
 
 
-  function _getMinCollateralWithBuffer(uint strikePrice, uint expiry, uint spotPrice, uint amount) 
-    internal view returns (uint minCollatWithBuffer) {
+  function _getRequiredCollateral(
+    uint strikePrice, 
+    uint expiry, 
+    uint spotPrice, 
+    uint amount) 
+    internal view returns (uint requiredCollat) {
+    // calculate required collat based on collatBuffer and collatPercent
     uint minCollat = getMinCollateral(
         optionType, 
         strikePrice, 
         expiry, 
         spotPrice, 
         amount);
-
-    // calculate required collat based on collatBuffer and collatPercent
     uint minCollatWithBuffer = minCollat.multiplyDecimal(currentStrategy.collatBuffer);
+
+    uint fullCollat = optionType == OptionMarket.OptionType.SHORT_CALL_BASE
+      ? amount
+      : amount.multiplyDecimal(spotPrice);
+
+    uint targetCollat = fullCollat.multiplyDecimal(currentStrategy.collatPercent);
+    
+    // make sure never exceeds full collat
+    requiredCollat = _min(fullCollat, _max(minCollatWithBuffer, targetCollat));
 }
 
   /**
@@ -300,6 +311,10 @@ contract DeltaStrategy is VaultAdapter {
 
   function _abs(int val) internal pure returns (uint) {
     return val >= 0 ? uint(val) : uint(-val);
+  }
+
+  function _min(uint x, uint y) internal pure returns (uint) {
+    return (x < y) ? x : y;
   }
 
   function _max(uint x, uint y) internal pure returns (uint) {

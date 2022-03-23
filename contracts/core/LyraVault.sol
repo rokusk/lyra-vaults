@@ -72,8 +72,6 @@ contract LyraVault is Ownable, BaseVault {
   /// @dev set strategy contract. This function can only be called by owner.
   function setStrategy(address _strategy) external onlyOwner {
     strategy = DeltaStrategy(_strategy);
-    collateralAsset.approve(_strategy, type(uint).max);
-    premiumCurrencyKey.approve(_strategy, type(uint).max);
     emit StrategyUpdated(_strategy);
   }
 
@@ -142,8 +140,9 @@ contract LyraVault is Ownable, BaseVault {
   function startNextRound(uint boardId) external {
     require(!vaultState.roundInProgress, "round opened");
     require(block.timestamp > vaultState.nextRoundReadyTimestamp, "CD");
-    require(strategy.isValidBoard(boardId), "invalid board");
-    strategy.clearAllActiveStrikes();
+
+    strategy.setBoardAndClearStrikes(boardId);
+    strategy.returnAllFunds();
 
     (uint lockedBalance, uint queuedWithdrawAmount) = _rollToNextRound(uint(lastQueuedWithdrawAmount));
 
@@ -154,4 +153,6 @@ contract LyraVault is Ownable, BaseVault {
 
     emit RoundStarted(vaultState.round, uint104(lockedBalance));
   }
+
+  // need setRewardRecipient
 }
