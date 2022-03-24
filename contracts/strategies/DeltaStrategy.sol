@@ -7,7 +7,7 @@ import "hardhat/console.sol";
 
 // Lyra
 import {VaultAdapter} from "@lyrafinance/core/contracts/periphery/VaultAdapter.sol";
-import {OptionMarket} from "@lyrafinance/core/contracts/OptionMarket.sol";
+import {OptionMarket} from "@lyrafinance/core/contracts/OptionMarket.sol"; // todo: maybe upgrade?
 import {OptionToken} from "@lyrafinance/core/contracts/OptionToken.sol";
 import {DecimalMath} from "@lyrafinance/core/contracts/synthetix/DecimalMath.sol";
 import {SignedDecimalMath} from "@lyrafinance/core/contracts/synthetix/SignedDecimalMath.sol";
@@ -18,10 +18,10 @@ contract DeltaStrategy is VaultAdapter {
   using SignedDecimalMath for int;
 
   address public immutable vault;
-  OptionMarket.OptionType public immutable optionType;
+  OptionMarket.OptionType public immutable optionType; // todo: maybe create own enum
 
-  uint public lastTradeTimestamp;
-  uint public lastAdjustmentTimestamp;
+  mapping(uint => uint) public lastTradeTimestamp;
+
   uint public activeExpiry;
   uint[] public activeStrikeIds;
   mapping(uint => uint) public strikeToPositionId;
@@ -100,9 +100,12 @@ contract DeltaStrategy is VaultAdapter {
     external view 
     returns (uint requiredCollat) {
     Strike memory strike = getStrikes(_toDynamic(strikeId))[0];
-    uint sellAmount = currentStrategy.size;
+    uint sellAmount = currentStrategy.size; //todo: allow for <size to execute?
     ExchangeRateParams memory exchangeParams = getExchangeParams();
     
+    // sets the correct amount for this trade instance
+    // if existing collateral is at risk, most likely wont be trading the same strike
+    // can call reducePosition() if previous trades are below buffer
     uint minBufferCollateral = _getBufferCollateral(
       strike.strikePrice, 
       strike.expiry, 
@@ -127,7 +130,7 @@ contract DeltaStrategy is VaultAdapter {
     address lyraRewardRecipient) 
     external onlyVault returns (uint, uint) {
     Strike memory strike = getStrikes(_toDynamic(strikeId))[0];
-    require(lastTradeTimestamp + currentStrategy.minTradeInterval <= block.timestamp, 
+    require(lastTradeTimestamp[strikeId] + currentStrategy.minTradeInterval <= block.timestamp, 
       "min time interval not passed");
     require(isValidStrike(strike), "invalid strike");
 
@@ -141,12 +144,12 @@ contract DeltaStrategy is VaultAdapter {
     }
 
     // perform trade
-    uint beforeBal = quoteAsset.balanceOf(address(this));
+    uint beforeBalance = quoteAsset.balanceOf(address(this));
     TradeResult memory result = openPosition(
       TradeInputParameters ({
         strikeId: strike.id,
         positionId: strikeToPositionId[strike.id],
-        iterations: 3,
+        iterations: 4,
         optionType: optionType,
         amount: currentStrategy.size,
         setCollateralTo: existingCollateral + collateralToAdd,
@@ -154,13 +157,13 @@ contract DeltaStrategy is VaultAdapter {
         maxTotalCost: type(uint).max,
         rewardRecipient: lyraRewardRecipient // set to zero address if don't want to wait for whitelist
       }));
-    lastTradeTimestamp = block.timestamp;
+    lastTradeTimestamp[strikeId] = block.timestamp;
 
     // update active strikes
     _addActiveStrike(strike, result.positionId);
 
-    // check balances and keep premiums in vault in case reducePosition() is called
-    _checkPostTrade(beforeBal, minExpectedPremium);
+    require(quoteAsset.balanceOf(address(this)) >= beforeBalance + minExpectedPremium,
+      "premium received is below min expected premium");
 
     return(result.positionId, result.totalCost);
   }
@@ -171,16 +174,12 @@ contract DeltaStrategy is VaultAdapter {
     ExchangeRateParams memory exchangeParams = getExchangeParams();
 
     require(strikeToPositionId[position.strikeId] != positionId, "invalid positionId");
-
-    // limit frequency of position adjustments
-    require(lastAdjustmentTimestamp + currentStrategy.minReducePositionInterval <= block.timestamp, 
-      "min time interval not passed");
     
     // only allows closing if collat < minBuffer
     uint minCollatPerAmount = _getBufferCollateral(
-      strike.strikePrice, 
-      strike.expiry, 
-      exchangeParams.spotPrice, 
+      strike.strikePrice,
+      strike.expiry,
+      exchangeParams.spotPrice,
       1e18);
     require(position.collateral < minCollatPerAmount.multiplyDecimal(position.amount), 
       "position properly collateralized");
@@ -199,7 +198,7 @@ contract DeltaStrategy is VaultAdapter {
         maxTotalCost: _getPremiumLimit(strike, false),
         rewardRecipient: lyraRewardRecipient // set to zero address if don't want to wait for whitelist
       }));
-    lastAdjustmentTimestamp = block.timestamp;
+    lastAdjustmentTimestamp[position.strikeId] = block.timestamp;
 
     // return closed collateral amount
     if (_isBaseCollat()) {
@@ -228,6 +227,9 @@ contract DeltaStrategy is VaultAdapter {
    * loop through all listingIds until target delta is found
    */
   function isValidStrike(Strike memory strike) public view returns (bool isValid) {
+
+    // todo: check the LP circuit breaker for max variance?
+    // should add to vaultAdapter
     uint[] memory strikeId = _toDynamic(strike.id);
     uint vol = getVols(strikeId)[0];
     int delta = _isCall()
@@ -288,16 +290,9 @@ function _getBufferCollateral(
       exchangeParams.spotPrice,
       strike.strikePrice);
 
-    limitPremium = _isCall() ? minCallPremium : minPutPremium;
-  }
-
-  /**
-   * @dev this should be executed after the vault execute trade on OptionMarket
-   */
-  function _checkPostTrade(uint beforeBalance, uint minExpectedPremium) 
-    internal view {
-    uint quoteBalance = quoteAsset.balanceOf(address(this));
-    require(quoteBalance >= beforeBalance + minExpectedPremium, "invalid post trade balance");
+    limitPremium = _isCall() 
+      ? minCallPremium.multiplyDecimal(currentStrategy.size)
+      : minPutPremium.multiplyDecimal(currentStrategy.size);
   }
 
   function _addActiveStrike(Strike memory strike, uint tradedPositionId) 
@@ -311,9 +306,11 @@ function _getBufferCollateral(
   function _clearAllActiveStrikes() internal {
     // todo: take care of i = 0 case
     for (uint i = 0; i < activeStrikeIds.length; i++) {
+      // todo: this one would revert if already settled...
       OptionToken.PositionWithOwner memory position = getPositions(_toDynamic(strikeToPositionId[i]))[0];
       require(position.state != OptionToken.PositionState.ACTIVE, "cannot clear active position");
       delete strikeToPositionId[i];
+      delete lastTradeTimestamp[i];
     }
     delete activeStrikeIds;
   }
