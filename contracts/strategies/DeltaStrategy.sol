@@ -7,6 +7,9 @@ import "hardhat/console.sol";
 
 // Lyra
 import {VaultAdapter} from "@lyrafinance/core/contracts/periphery/VaultAdapter.sol";
+import {GWAVOracle} from "@lyrafinance/core/contracts/periphery/GWAVOracle.sol";
+
+// Libraries
 import {DecimalMath} from "@lyrafinance/core/contracts/synthetix/DecimalMath.sol";
 import {SignedDecimalMath} from "@lyrafinance/core/contracts/synthetix/SignedDecimalMath.sol";
 
@@ -16,6 +19,7 @@ contract DeltaStrategy is VaultAdapter {
 
   address public immutable vault;
   OptionType public immutable optionType;
+  GWAVOracle public immutable gwavOracle;
 
   mapping(uint => uint) public lastTradeTimestamp;
 
@@ -35,7 +39,8 @@ contract DeltaStrategy is VaultAdapter {
     uint maxVol;
     uint size;
     uint minTradeInterval;
-    uint minReducePositionInterval;
+    uint maxVolVariance;
+    uint gwavPeriod;
   }
 
   DeltaStrategyDetail public currentStrategy;
@@ -44,9 +49,14 @@ contract DeltaStrategy is VaultAdapter {
   // ADMIN //
   ///////////
 
-  constructor(address _vault, OptionType _optionType) VaultAdapter() {
+  constructor(
+    address _vault,
+    OptionType _optionType,
+    GWAVOracle _gwavOracle
+  ) VaultAdapter() {
     vault = _vault;
     optionType = _optionType;
+    gwavOracle = _gwavOracle;
 
     quoteAsset.approve(vault, type(uint).max);
     baseAsset.approve(vault, type(uint).max);
@@ -68,7 +78,7 @@ contract DeltaStrategy is VaultAdapter {
 
   function setBoard(uint boardId) external onlyVault {
     Board memory board = getBoard(boardId);
-    require(isValidBoard(boardId), "invalid board");
+    require(isValidBoard(board), "invalid board");
     activeExpiry = board.expiry;
   }
 
@@ -131,6 +141,7 @@ contract DeltaStrategy is VaultAdapter {
       "min time interval not passed"
     );
     require(isValidStrike(strike), "invalid strike");
+    require(_isValidVolVariance(strikeId), "vol variance exceeded");
 
     // get minimum expected premium based on minIv
     uint minExpectedPremium = _getPremiumLimit(strike, true);
@@ -141,7 +152,6 @@ contract DeltaStrategy is VaultAdapter {
     }
 
     // perform trade
-    uint beforeBalance = quoteAsset.balanceOf(address(this));
     TradeResult memory result = openPosition(
       TradeInputParameters({
         strikeId: strike.id,
@@ -160,10 +170,7 @@ contract DeltaStrategy is VaultAdapter {
     // update active strikes
     _addActiveStrike(strike, result.positionId);
 
-    require(
-      quoteAsset.balanceOf(address(this)) >= beforeBalance + minExpectedPremium,
-      "premium received is below min expected premium"
-    );
+    require(result.totalCost >= minExpectedPremium, "premium received is below min expected premium");
 
     return (result.positionId, result.totalCost);
   }
@@ -184,6 +191,7 @@ contract DeltaStrategy is VaultAdapter {
 
     // closes excess position with premium balance
     uint closeAmount = position.amount - position.collateral.divideDecimal(minCollatPerAmount);
+    uint maxExpectedPremium = _getPremiumLimit(strike, false);
     TradeResult memory result = closePosition(
       TradeInputParameters({
         strikeId: position.strikeId,
@@ -193,11 +201,12 @@ contract DeltaStrategy is VaultAdapter {
         amount: closeAmount,
         setCollateralTo: position.collateral,
         minTotalCost: type(uint).min,
-        maxTotalCost: _getPremiumLimit(strike, false),
+        maxTotalCost: maxExpectedPremium,
         rewardRecipient: lyraRewardRecipient // set to zero address if don't want to wait for whitelist
       })
     );
-    lastAdjustmentTimestamp[position.strikeId] = block.timestamp;
+
+    require(result.totalCost <= maxExpectedPremium, "premium paid is above max expected premium");
 
     // return closed collateral amount
     if (_isBaseCollat()) {
@@ -209,9 +218,9 @@ contract DeltaStrategy is VaultAdapter {
     }
   }
 
-  /////////////
-  // HELPERS //
-  /////////////
+  ////////////////
+  // Validation //
+  ////////////////
 
   function isValidBoard(Board memory board) public view returns (bool isValid) {
     return _isValidExpiry(board.expiry);
@@ -227,8 +236,6 @@ contract DeltaStrategy is VaultAdapter {
       return false;
     }
 
-    // todo: check the LP circuit breaker for max variance?
-    // should add to vaultAdapter
     uint[] memory strikeId = _toDynamic(strike.id);
     uint vol = getVols(strikeId)[0];
     int delta = _isCall() ? getDeltas(strikeId)[0] - SignedDecimalMath.UNIT : getDeltas(strikeId)[0];
@@ -241,6 +248,26 @@ contract DeltaStrategy is VaultAdapter {
       return false;
     }
   }
+
+  function _isValidVolVariance(uint strikeId) internal view returns (bool isValid) {
+    uint volGWAV = gwavOracle.volGWAV(strikeId, currentStrategy.gwavPeriod);
+    uint volSpot = getVols(_toDynamic(strikeId))[0];
+
+    uint volDiff = (volGWAV >= volSpot) ? volGWAV - volSpot : volSpot - volGWAV;
+
+    return isValid = (volDiff < currentStrategy.maxVolVariance) ? true : false;
+  }
+
+  function _isValidExpiry(uint expiry) public view returns (bool isValid) {
+    uint secondsToExpiry = _getSecondsToExpiry(expiry);
+    isValid = (secondsToExpiry >= currentStrategy.minTimeToExpiry && secondsToExpiry <= currentStrategy.maxTimeToExpiry)
+      ? true
+      : false;
+  }
+
+  /////////////////////////////
+  // Trade Parameter Helpers //
+  /////////////////////////////
 
   function _getFullCollateral(uint strikePrice, uint amount) internal view returns (uint fullCollat) {
     // calculate required collat based on collatBuffer and collatPercent
@@ -281,6 +308,10 @@ contract DeltaStrategy is VaultAdapter {
       : minPutPremium.multiplyDecimal(currentStrategy.size);
   }
 
+  //////////////////////////////
+  // Active Strike Management //
+  //////////////////////////////
+
   function _addActiveStrike(Strike memory strike, uint tradedPositionId) internal {
     if (!_isActiveStrike(strike.id)) {
       strikeToPositionId[strike.id] = tradedPositionId;
@@ -304,19 +335,16 @@ contract DeltaStrategy is VaultAdapter {
     isActive = strikeToPositionId[strikeId] != 0 ? true : false;
   }
 
+  //////////
+  // Misc //
+  //////////
+
   function _isBaseCollat() internal view returns (bool isBase) {
     isBase = (optionType == OptionType.SHORT_CALL_BASE) ? true : false;
   }
 
   function _isCall() internal view returns (bool isCall) {
     isCall = (optionType == OptionType.SHORT_PUT_QUOTE) ? false : true;
-  }
-
-  function _isValidExpiry(uint expiry) public view returns (bool isValid) {
-    uint secondsToExpiry = _getSecondsToExpiry(expiry);
-    isValid = (secondsToExpiry >= currentStrategy.minTimeToExpiry && secondsToExpiry <= currentStrategy.maxTimeToExpiry)
-      ? true
-      : false;
   }
 
   function _getSecondsToExpiry(uint expiry) internal view returns (uint) {

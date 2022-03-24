@@ -75,13 +75,13 @@ contract LyraVault is Ownable, BaseVault {
 
     // open a short call position on lyra and collect premium
     uint collateralBefore = IERC20(vaultParams.asset).balanceOf(address(this));
-    require(IERC20(vaultParams.asset).transfer(address(strategy), collateralToAdd),
-      "collateral transfer to strategy failed");
+    require(
+      IERC20(vaultParams.asset).transfer(address(strategy), collateralToAdd),
+      "collateral transfer to strategy failed"
+    );
 
     // perform trade through strategy
-    (uint positionId, uint realPremium) = strategy.doTrade(
-      strikeId, collateralToAdd, lyraRewardRecipient
-    );
+    (uint positionId, uint realPremium) = strategy.doTrade(strikeId, collateralToAdd, lyraRewardRecipient);
 
     uint collateralAfter = IERC20(vaultParams.asset).balanceOf(address(this));
 
@@ -143,7 +143,6 @@ contract LyraVault is Ownable, BaseVault {
   function setLyraRewardRecipient(address recipient) external onlyOwner {
     lyraRewardRecipient = recipient;
   }
-
 
   // need setRewardRecipient
 }
