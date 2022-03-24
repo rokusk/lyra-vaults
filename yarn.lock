@@ -936,10 +936,10 @@
   resolved "https://registry.yarnpkg.com/@humanwhocodes/object-schema/-/object-schema-1.2.0.tgz#87de7af9c231826fdd68ac7258f77c429e0e5fcf"
   integrity sha512-wdppn25U8z/2yiaT6YGquE6X8sSv7hNMWSXYSSU1jGv/yd6XqjXgTDJ8KP4NgjTXfJ3GbRjeeb8RTV7a/VpM+w==
 
-"@lyrafinance/core@^0.0.28":
-  version "0.0.28"
-  resolved "https://registry.yarnpkg.com/@lyrafinance/core/-/core-0.0.28.tgz#2ff18b5e917e8a2acf34c14625d433ae3ecfcbd0"
-  integrity sha512-/yTroakOAKjK15gKbtQlFKWPnh85VtwbwmNTUXMhwpnVJReqA2ljTq+rldc0p/r/rYnCWHaf/tB9JryN8UESuw==
+"@lyrafinance/core@^0.0.29":
+  version "0.0.29"
+  resolved "https://registry.yarnpkg.com/@lyrafinance/core/-/core-0.0.29.tgz#3d50c9a040086726438bdc3851c1f28848c900ab"
+  integrity sha512-hpmsN8mrETEZDnAeRN0JBAuxg28OjiwZk6K+HAHieg/K6HK3h/UDqEp0Zwcnd7A84i0CqhH6t9KSWxyDWKIBEQ==
   dependencies:
     "@ethersproject/abi" "^5.4.0"
     "@openzeppelin/contracts" "^4.4.1"
