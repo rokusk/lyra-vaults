@@ -83,6 +83,7 @@ contract LyraVault is Ownable, BaseVault {
     emit Trade(msg.sender, positionId, premiumReceived);
   }
 
+  /// @dev anyone close part of the position with premium made by the strategy if a position is dangerous
   function reducePosition(uint positionId) external {
     strategy.reducePosition(positionId, lyraRewardRecipient);
   }

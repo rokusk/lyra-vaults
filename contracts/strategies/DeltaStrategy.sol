@@ -83,12 +83,19 @@ contract DeltaStrategy is VaultAdapter {
   // VAULT ACTIONS //
   ///////////////////
 
+  /**
+   * @dev set the board id that will be traded for the next round
+   * @param boardId lyra board Id.
+   */
   function setBoard(uint boardId) external onlyVault {
     Board memory board = getBoard(boardId);
-    require(isValidBoard(board), "invalid board");
+    require(_isValidExpiry(board.expiry), "invalid board");
     activeExpiry = board.expiry;
   }
 
+  /**
+   * @dev convert premium into quote asset and send it back to the vault.
+   */
   function returnFundsAndClearStrikes() external onlyVault {
     ExchangeRateParams memory exchangeParams = getExchangeParams();
     uint quoteBal = quoteAsset.balanceOf(address(this));
@@ -107,6 +114,14 @@ contract DeltaStrategy is VaultAdapter {
     _clearAllActiveStrikes();
   }
 
+  /**
+   * @notice sell a fix aomunt of options and collect premium
+   * @dev the vault should pass in a strike id, and the strategy would verify if the strike is valid on-chain.
+   * @param strikeId lyra strikeId to trade
+   * @param lyraRewardRecipient address to receive trading reward. This need to be whitelisted
+   * @return positionId
+   * @return premiumReceived
+   */
   function doTrade(uint strikeId, address lyraRewardRecipient)
     external
     onlyVault
@@ -117,13 +132,14 @@ contract DeltaStrategy is VaultAdapter {
     )
   {
     // validate trade
-    Strike memory strike = getStrikes(_toDynamic(strikeId))[0];
     require(
-      lastTradeTimestamp[strike.id] + currentStrategy.minTradeInterval <= block.timestamp,
+      lastTradeTimestamp[strikeId] + currentStrategy.minTradeInterval <= block.timestamp,
       "min time interval not passed"
     );
+    require(_isValidVolVariance(strikeId), "vol variance exceeded");
+
+    Strike memory strike = getStrikes(_toDynamic(strikeId))[0];
     require(isValidStrike(strike), "invalid strike");
-    require(_isValidVolVariance(strike.id), "vol variance exceeded");
 
     uint setCollateralTo;
     (collateralToAdd, setCollateralTo) = getRequiredCollateral(strike);
@@ -133,11 +149,14 @@ contract DeltaStrategy is VaultAdapter {
       "collateral transfer from vault failed"
     );
 
-    (positionId, premiumReceived) = sellStrike(strike, setCollateralTo, lyraRewardRecipient);
+    (positionId, premiumReceived) = _sellStrike(strike, setCollateralTo, lyraRewardRecipient);
   }
 
   /**
-   * @dev convert size (denominated in standard sizes) to actual contract amount.
+   * @dev calculate required collateral to add in the next trade.
+   * sell size is fixed as currentStrategy.size
+   * only add collateral if the additional sell will make the position out of buffer range
+   * never remove collateral from an existing position
    */
   function getRequiredCollateral(Strike memory strike)
     public
@@ -177,11 +196,14 @@ contract DeltaStrategy is VaultAdapter {
   }
 
   /**
-   * request trade detail according to the strategy. Keeps premiums in contract
-   * For puts, since premium is added to collateral, basically premium amount
-   * is not used from the funds that are sent
+   * @dev perform the trade
+   * @param strike strike detail
+   * @param setCollateralTo target collateral amount
+   * @param lyraRewardRecipient address to receive lyra trading reward
+   * @return positionId
+   * @return premiumReceived
    */
-  function sellStrike(
+  function _sellStrike(
     Strike memory strike,
     uint setCollateralTo,
     address lyraRewardRecipient
@@ -206,13 +228,16 @@ contract DeltaStrategy is VaultAdapter {
     lastTradeTimestamp[strike.id] = block.timestamp;
 
     // update active strikes
-    _addActiveStrike(strike, result.positionId);
+    _addActiveStrike(strike.id, result.positionId);
 
     require(result.totalCost >= minExpectedPremium, "premium received is below min expected premium");
 
     return (result.positionId, result.totalCost);
   }
 
+  /**
+   * @dev use premium in strategy to reduce position size if collateral ratio is out of range
+   */
   function reducePosition(uint positionId, address lyraRewardRecipient) external onlyVault {
     OptionPosition memory position = getPositions(_toDynamic(positionId))[0];
     Strike memory strike = getStrikes(_toDynamic(position.strikeId))[0];
@@ -265,9 +290,8 @@ contract DeltaStrategy is VaultAdapter {
   }
 
   /**
-   * @dev get the target listing id to trade on.
-   * with delta vault strategy, this will check whether board is valid and
-   * loop through all listingIds until target delta is found
+   * @dev verify if the strike is valid for the strategy
+   * @return isValid true if vol is withint [minVol, maxVol] and delta is within targetDelta +- maxDeltaGap
    */
   function isValidStrike(Strike memory strike) public view returns (bool isValid) {
     if (activeExpiry != strike.expiry) {
@@ -280,22 +304,24 @@ contract DeltaStrategy is VaultAdapter {
 
     uint deltaGap = _abs(currentStrategy.targetDelta - delta);
 
-    if (vol >= currentStrategy.minVol && vol <= currentStrategy.maxVol && deltaGap < currentStrategy.maxDeltaGap) {
-      return true;
-    } else {
-      return false;
-    }
+    return vol >= currentStrategy.minVol && vol <= currentStrategy.maxVol && deltaGap < currentStrategy.maxDeltaGap;
   }
 
+  /**
+   * @dev check if the vol variance for the given strike is within certain range
+   */
   function _isValidVolVariance(uint strikeId) internal view returns (bool isValid) {
     uint volGWAV = gwavOracle.volGWAV(strikeId, currentStrategy.gwavPeriod);
     uint volSpot = getVols(_toDynamic(strikeId))[0];
 
     uint volDiff = (volGWAV >= volSpot) ? volGWAV - volSpot : volSpot - volGWAV;
 
-    return isValid = (volDiff < currentStrategy.maxVolVariance) ? true : false;
+    return isValid = volDiff < currentStrategy.maxVolVariance;
   }
 
+  /**
+   * @dev check if the expiry of the board is valid according to the strategy
+   */
   function _isValidExpiry(uint expiry) public view returns (bool isValid) {
     uint secondsToExpiry = _getSecondsToExpiry(expiry);
     isValid = (secondsToExpiry >= currentStrategy.minTimeToExpiry && secondsToExpiry <= currentStrategy.maxTimeToExpiry)
@@ -312,6 +338,9 @@ contract DeltaStrategy is VaultAdapter {
     fullCollat = _isBaseCollat() ? amount : amount.multiplyDecimal(strikePrice);
   }
 
+  /**
+   * @dev get amount of collateral needed for shorting {amount} of strike, according to the strategy
+   */
   function _getBufferCollateral(
     uint strikePrice,
     uint expiry,
@@ -350,17 +379,25 @@ contract DeltaStrategy is VaultAdapter {
   // Active Strike Management //
   //////////////////////////////
 
-  function _addActiveStrike(Strike memory strike, uint tradedPositionId) internal {
-    if (!_isActiveStrike(strike.id)) {
-      strikeToPositionId[strike.id] = tradedPositionId;
-      activeStrikeIds.push(strike.id);
+  /**
+   * @dev add strike id to activeStrikeIds array
+   */
+  function _addActiveStrike(uint strikeId, uint tradedPositionId) internal {
+    if (!_isActiveStrike(strikeId)) {
+      strikeToPositionId[strikeId] = tradedPositionId;
+      activeStrikeIds.push(strikeId);
     }
   }
 
+  /**
+   * @dev remove position data opened in the current round.
+   * this can only be called after the position is settled by lyra
+   **/
   function _clearAllActiveStrikes() internal {
     if (activeStrikeIds.length != 0) {
       for (uint i = 0; i < activeStrikeIds.length; i++) {
         OptionPosition memory position = getPositions(_toDynamic(strikeToPositionId[i]))[0];
+        // if position state is still
         require(position.state != PositionState.ACTIVE, "cannot clear active position");
         delete strikeToPositionId[i];
         delete lastTradeTimestamp[i];
@@ -370,7 +407,7 @@ contract DeltaStrategy is VaultAdapter {
   }
 
   function _isActiveStrike(uint strikeId) internal view returns (bool isActive) {
-    isActive = strikeToPositionId[strikeId] != 0 ? true : false;
+    isActive = strikeToPositionId[strikeId] != 0;
   }
 
   //////////
