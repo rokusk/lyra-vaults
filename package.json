@@ -36,7 +36,7 @@
   "devDependencies": {
     "@eth-optimism/plugins": "^1.0.0-alpha.3",
     "@ethereum-waffle/mock-contract": "^3.3.0",
-    "@lyrafinance/core": "0.0.26",
+    "@lyrafinance/core": "^0.0.33",
     "@nomiclabs/hardhat-ethers": "^2.0.5",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@openzeppelin/contracts": "^4.4.1",
@@ -54,7 +54,7 @@
     "hardhat": "^2.8.0",
     "hardhat-contract-sizer": "^2.0.3",
     "hardhat-gas-reporter": "^1.0.4",
-    "husky": "4.3.8", 
+    "husky": "4.3.8",
     "lint-staged": "^10.5.4",
     "mathjs": "^9.3.0",
     "prettier": "^2.2.1",

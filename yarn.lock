@@ -936,10 +936,10 @@
   resolved "https://registry.yarnpkg.com/@humanwhocodes/object-schema/-/object-schema-1.2.0.tgz#87de7af9c231826fdd68ac7258f77c429e0e5fcf"
   integrity sha512-wdppn25U8z/2yiaT6YGquE6X8sSv7hNMWSXYSSU1jGv/yd6XqjXgTDJ8KP4NgjTXfJ3GbRjeeb8RTV7a/VpM+w==
 
-"@lyrafinance/core@0.0.26":
-  version "0.0.26"
-  resolved "https://registry.yarnpkg.com/@lyrafinance/core/-/core-0.0.26.tgz#9a70b469914092d326049de63a6a108210137c67"
-  integrity sha512-pCRQ3woaHdmX0w8ZufYn1dd8X8bZ8yBWWB6DBE1OGs9OwWCcDvBslyaDmWOMtc/7bHpimCLGfSkdZijGwauDQA==
+"@lyrafinance/core@^0.0.33":
+  version "0.0.33"
+  resolved "https://registry.yarnpkg.com/@lyrafinance/core/-/core-0.0.33.tgz#4b97780d2d8652147862fd77fa987d7a1281b00d"
+  integrity sha512-cgIDBK+Ppij+nmxmj/r8V2jsJRsII5s0jsoGwO8PXCYbNi6gTkODQlc72HGytvomTMFwuccFHqDEa1oGziUAkQ==
   dependencies:
     "@ethersproject/abi" "^5.4.0"
     "@openzeppelin/contracts" "^4.4.1"
@@ -947,6 +947,7 @@
     "@openzeppelin/hardhat-upgrades" "^1.14.0"
     "@typechain/hardhat" "^3.0.0"
     hardhat-tracer "^1.0.0-alpha.6"
+    lodash "^4.17.21"
     stochastic "^0.0.14"
 
 "@metamask/eth-sig-util@^4.0.0":
