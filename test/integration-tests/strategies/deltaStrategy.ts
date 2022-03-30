@@ -1,7 +1,8 @@
 import { lyraConstants, lyraCore, lyraUtils } from '@lyrafinance/core';
-import { LyraGlobal } from '@lyrafinance/core/dist/test/utils/package/parseFiles';
+import { LyraGlobal, LyraMarket } from '@lyrafinance/core/dist/test/utils/package/parseFiles';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
+import { constants } from 'ethers';
 import { ethers } from 'hardhat';
 import { DeltaStrategy, LyraVault, MockERC20 } from '../../../typechain-types';
 import { DeltaStrategyDetailStruct } from '../../../typechain-types/DeltaStrategy';
@@ -27,6 +28,7 @@ describe('Delta Strategy integration test', async () => {
   let seth: MockERC20;
 
   let lyraGlobal: LyraGlobal;
+  let lyraETHMarkets: LyraMarket;
   let deployer: SignerWithAddress;
   let manager: SignerWithAddress;
   let vault: LyraVault;
@@ -43,6 +45,9 @@ describe('Delta Strategy integration test', async () => {
   before('deploy lyra core', async () => {
     const localTestSystem = await lyraCore.deploy(deployer, false, true);
     lyraGlobal = lyraCore.getGlobalContracts('local');
+
+    lyraETHMarkets = lyraCore.getMarketContracts('local', 'sETH');
+
     await lyraCore.seed(deployer, localTestSystem);
   });
 
@@ -58,7 +63,7 @@ describe('Delta Strategy integration test', async () => {
     const cap = ethers.utils.parseEther('5000');
     const decimals = 18;
 
-    vault = (await LyraVault.deploy(
+    vault = (await LyraVault.connect(deployer).deploy(
       susd.address,
       manager.address, // feeRecipient,
       86400 * 7,
@@ -86,6 +91,22 @@ describe('Delta Strategy integration test', async () => {
 
   before('initialize strategy and adaptor', async () => {
     // todo: remove this once we put everything in constructor
+
+    await strategy.connect(manager).init(
+      constants.AddressZero, // curve swap
+      lyraETHMarkets.OptionToken.address as string,
+      lyraETHMarkets.OptionMarket.address as string,
+      lyraETHMarkets.LiquidityPool.address as string,
+      lyraETHMarkets.ShortCollateral.address as string,
+      lyraGlobal.SynthetixAdapter.address as string,
+      lyraETHMarkets.OptionMarketPricer.address as string,
+      lyraETHMarkets.OptionGreekCache.address as string,
+      susd.address, // quote
+      seth.address, // base
+      lyraGlobal.BasicFeeCounter.address as string,
+    );
+
+    await strategy.connect(manager).initStrategy();
   });
 
   describe('immutables', async () => {
