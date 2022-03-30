@@ -1,7 +1,6 @@
-import { lyraCore, lyraUtils } from '@lyrafinance/core';
+import { lyraConstants, lyraCore, lyraUtils } from '@lyrafinance/core';
 import { InitOverrides } from '@lyrafinance/core/dist/test/utils/deployTestSystem';
 import { ethers } from 'ethers';
-
 async function main() {
   // 1. get local deployer and network
   const provider = new ethers.providers.JsonRpcProvider('http://localhost:8545');
@@ -36,15 +35,28 @@ async function main() {
   const lyraGlobal = lyraCore.getGlobalContracts('local');
   console.log('contract name:', lyraGlobal.SynthetixAdapter.contractName);
   console.log('address:', lyraGlobal.SynthetixAdapter.address);
-  console.log('abi:', lyraGlobal.SynthetixAdapter.abi);
-  console.log('bytecode:', lyraGlobal.SynthetixAdapter.bytecode.slice(0, 20) + '...');
+  // console.log('abi:', lyraGlobal.SynthetixAdapter.abi);
+  // console.log('bytecode:', lyraGlobal.SynthetixAdapter.bytecode.slice(0, 20) + '...');
 
   // 5. get market contracts
   const lyraMarket = lyraCore.getMarketContracts('local', 'sETH');
   console.log('contract name:', lyraMarket.OptionMarket.contractName);
   console.log('address:', lyraMarket.OptionMarket.address);
-  console.log('abi:', lyraMarket.OptionMarket.abi);
-  console.log('bytecode:', lyraMarket.OptionMarket.bytecode.slice(0, 20) + '...');
+  // console.log('abi:', lyraMarket.OptionMarket.abi);
+  // console.log('bytecode:', lyraMarket.OptionMarket.bytecode.slice(0, 20) + '...');
+
+  const tradeInput = {
+    strikeId: 1,
+    positionId: 0,
+    iterations: 1,
+    optionType: lyraCore.OptionType.LONG_CALL,
+    amount: lyraUtils.toBN('1'),
+    setCollateralTo: lyraUtils.toBN('0'),
+    minTotalCost: 0,
+    maxTotalCost: lyraConstants.MAX_UINT,
+  };
+  const tx = await localTestSystem.optionMarket.openPosition(tradeInput);
+  console.log('Tx', tx.wait());
 }
 
 main()
