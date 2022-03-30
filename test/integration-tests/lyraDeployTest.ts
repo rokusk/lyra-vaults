@@ -17,7 +17,8 @@ describe('Integration Test', () => {
 
   before(async () => {
     [account] = await ethers.getSigners();
-    testSystem = await lyraCore.deploy(account, true);
+    const enableTracer = true; // call with yarn test --trace
+    testSystem = await lyraCore.deploy(account, enableTracer);
     await lyraCore.seed(account, testSystem);
   });
 

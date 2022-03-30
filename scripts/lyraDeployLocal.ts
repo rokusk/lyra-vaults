@@ -17,6 +17,7 @@ async function main() {
 
   // 2. deploy and seed market with overrides
   const exportAddresses = true;
+  const enableTracer = false;
   const overrides: InitOverrides = {
     minCollateralParams: {
       ...lyraCore.defaultParams.minCollateralParams,
@@ -24,7 +25,7 @@ async function main() {
     },
   };
 
-  const localTestSystem = await lyraCore.deploy(deployer, false, exportAddresses, overrides);
+  const localTestSystem = await lyraCore.deploy(deployer, enableTracer, exportAddresses, overrides);
   await lyraCore.seed(deployer, localTestSystem);
 
   // // 3. add new BTC market
