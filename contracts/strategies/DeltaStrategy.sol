@@ -92,14 +92,10 @@ contract DeltaStrategy is VaultAdapter, IStrategy {
       _baseAsset,
       _feeCounter
     );
-  }
 
-  function initStrategy() external onlyOwner {
     quoteAsset.approve(address(vault), type(uint).max);
     baseAsset.approve(address(vault), type(uint).max);
     collateralAsset = _isBaseCollat() ? baseAsset : quoteAsset;
-
-    // todo: init adapter
   }
 
   /**
@@ -356,9 +352,8 @@ contract DeltaStrategy is VaultAdapter, IStrategy {
    */
   function _isValidExpiry(uint expiry) public view returns (bool isValid) {
     uint secondsToExpiry = _getSecondsToExpiry(expiry);
-    isValid = (secondsToExpiry >= currentStrategy.minTimeToExpiry && secondsToExpiry <= currentStrategy.maxTimeToExpiry)
-      ? true
-      : false;
+    isValid = (secondsToExpiry >= currentStrategy.minTimeToExpiry &&
+      secondsToExpiry <= currentStrategy.maxTimeToExpiry);
   }
 
   /////////////////////////////
