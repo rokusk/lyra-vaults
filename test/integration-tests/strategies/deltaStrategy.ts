@@ -216,7 +216,7 @@ describe('Delta Strategy integration test', async () => {
       const strikeObj = await strikeIdToDetail(lyraTestSystem.optionMarket, strikes[3]);
       const [collateralToAdd] = await strategy.getRequiredCollateral(strikeObj);
 
-      const vaultSatetBefore = await vault.vaultState();
+      const vaultStateBefore = await vault.vaultState();
       const strategySUSDBalance = await susd.balanceOf(strategy.address);
 
       // 3400 is a good strike
@@ -228,7 +228,7 @@ describe('Delta Strategy integration test', async () => {
       // strategy shouldn't hold any seth
       expect(strategyBalance.isZero()).to.be.true;
       // check state.lockAmount left is updated
-      expect(vaultSatetBefore.lockedAmountLeft.sub(vaultSatetAfter.lockedAmountLeft).eq(collateralToAdd)).to.be.true;
+      expect(vaultStateBefore.lockedAmountLeft.sub(vaultSatetAfter.lockedAmountLeft).eq(collateralToAdd)).to.be.true;
       // check that we receive sUSD
       expect(strategySUDCBalanceAfter.sub(strategySUSDBalance).gt(0)).to.be.true;
 
@@ -254,13 +254,13 @@ describe('Delta Strategy integration test', async () => {
       const positionId = await strategy.strikeToPositionId(strikeObj.id);
 
       const [collateralToAdd] = await strategy.getRequiredCollateral(strikeObj);
-      const vaultSatetBefore = await vault.vaultState();
+      const vaultStateBefore = await vault.vaultState();
       const [positionBefore] = await lyraTestSystem.optionToken.getOptionPositions([positionId]);
 
       await vault.connect(randomUser).trade(strikes[3]);
 
       const vaultSatetAfter = await vault.vaultState();
-      expect(vaultSatetBefore.lockedAmountLeft.sub(vaultSatetAfter.lockedAmountLeft).eq(collateralToAdd)).to.be.true;
+      expect(vaultStateBefore.lockedAmountLeft.sub(vaultSatetAfter.lockedAmountLeft).eq(collateralToAdd)).to.be.true;
 
       const [positionAfter] = await lyraTestSystem.optionToken.getOptionPositions([positionId]);
       expect(positionAfter.amount.sub(positionBefore.amount).eq(defaultDeltaStrategyDetail.size)).to.be.true;
