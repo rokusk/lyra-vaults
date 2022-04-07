@@ -26,6 +26,8 @@ contract DeltaStrategy is VaultAdapter, IStrategy {
   LyraVault public immutable vault;
   OptionType public immutable optionType;
   GWAVOracle public immutable gwavOracle;
+
+  /// @dev asset used as collateral in AMM to sell. Should be the same as vault asset
   IERC20 public collateralAsset;
 
   mapping(uint => uint) public lastTradeTimestamp;
@@ -124,22 +126,24 @@ contract DeltaStrategy is VaultAdapter, IStrategy {
   }
 
   /**
-   * @dev convert premium into quote asset and send it back to the vault.
+   * @dev convert premium in quote asset into collateral asset and send it back to the vault.
    */
   function returnFundsAndClearStrikes() external onlyVault {
     ExchangeRateParams memory exchangeParams = getExchangeParams();
     uint quoteBal = quoteAsset.balanceOf(address(this));
 
-    uint quoteReceived = 0;
     if (_isBaseCollat()) {
-      // todo: double check this
+      // exchange quote asset to base asset, and send base asset back to vault
       uint baseBal = baseAsset.balanceOf(address(this));
-      uint minQuoteExpected = baseBal.multiplyDecimal(exchangeParams.spotPrice).multiplyDecimal(
+      uint minQuoteExpected = quoteBal.divideDecimal(exchangeParams.spotPrice).multiplyDecimal(
         DecimalMath.UNIT - exchangeParams.baseQuoteFeeRate
       );
-      quoteReceived = exchangeFromExactBase(baseBal, minQuoteExpected);
+      uint baseReceived = exchangeFromExactQuote(quoteBal, minQuoteExpected);
+      require(baseAsset.transfer(address(vault), baseBal + baseReceived), "failed to return funds from strategy");
+    } else {
+      // send quote balance directly
+      require(quoteAsset.transfer(address(vault), quoteBal), "failed to return funds from strategy");
     }
-    require(quoteAsset.transfer(address(vault), quoteBal + quoteReceived), "failed to return funds from strategy");
 
     _clearAllActiveStrikes();
   }

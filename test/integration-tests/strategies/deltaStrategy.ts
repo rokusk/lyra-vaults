@@ -306,13 +306,36 @@ describe('Delta Strategy integration test', async () => {
       const totalPositions = (await lyraTestSystem.optionToken.nextId()).sub(1).toNumber();
       const idsToSettle = Array.from({ length: totalPositions }, (_, i) => i + 1); // create array of [1... totalPositions]
       await lyraTestSystem.shortCollateral.settleOptions(idsToSettle);
+
+      const ethInVaultBefore = await seth.balanceOf(vault.address);
+
+      const ethInStrategyBefore = await seth.balanceOf(strategy.address);
+      const susdInStrategyBefore = await susd.balanceOf(strategy.address);
+
+      // collateral should be back in the vault after settlement
+      expect(ethInStrategyBefore.gt(0)).to.be.true;
+      // profit are kept as quote asset in the strategy
+      expect(susdInStrategyBefore.gt(0)).to.be.true;
+
       await vault.closeRound();
 
-      // initiate withdraw for later test
-      await vault.connect(randomUser2).initiateWithdraw(toBN('50'));
+      const susdInStrategyAfter = await susd.balanceOf(strategy.address);
+      const ethdInStrategyAfter = await susd.balanceOf(strategy.address);
+      const ethInValutAfter = await seth.balanceOf(vault.address);
+
+      // strategy should be empty after close round
+      expect(susdInStrategyAfter.isZero()).to.be.true;
+      expect(ethdInStrategyAfter.isZero()).to.be.true;
+
+      // the vault should get higher than the amount get from settlement, because of the premium
+      expect(ethInValutAfter.sub(ethInVaultBefore).gt(ethInStrategyBefore));
     });
   });
   describe('start round 2', async () => {
+    before('prepare before new round start', async () => {
+      // initiate withdraw for later test
+      await vault.connect(randomUser2).initiateWithdraw(toBN('50'));
+    });
     before('create new board', async () => {
       await TestSystem.marketActions.createBoard(lyraTestSystem, boardParameter);
       const boards = await lyraTestSystem.optionMarket.getLiveBoards();
@@ -322,15 +345,15 @@ describe('Delta Strategy integration test', async () => {
       await lyraEvm.fastForward(lyraConstants.DAY_SEC);
       await vault.connect(manager).startNextRound(boardId);
     });
-    // it('should be able to complete the withdraw', async() => {
-    //   const sethBefore = await seth.balanceOf(randomUser2.address)
+    it('should be able to complete the withdraw', async () => {
+      const sethBefore = await seth.balanceOf(randomUser2.address);
 
-    //   await vault.connect(randomUser2).completeWithdraw();
+      await vault.connect(randomUser2).completeWithdraw();
 
-    //   const sethAfter = await seth.balanceOf(randomUser2.address)
+      const sethAfter = await seth.balanceOf(randomUser2.address);
 
-    //   console.log(sethAfter.sub(sethBefore).toString())
-    // })
+      expect(sethAfter.sub(sethBefore).gt(toBN('50'))).to.be.true;
+    });
   });
 });
 
