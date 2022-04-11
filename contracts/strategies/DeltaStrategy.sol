@@ -26,6 +26,8 @@ contract DeltaStrategy is VaultAdapter, IStrategy {
   LyraVault public immutable vault;
   OptionType public immutable optionType;
   GWAVOracle public immutable gwavOracle;
+
+  /// @dev asset used as collateral in AMM to sell. Should be the same as vault asset
   IERC20 public collateralAsset;
 
   mapping(uint => uint) public lastTradeTimestamp;
@@ -124,22 +126,24 @@ contract DeltaStrategy is VaultAdapter, IStrategy {
   }
 
   /**
-   * @dev convert premium into quote asset and send it back to the vault.
+   * @dev convert premium in quote asset into collateral asset and send it back to the vault.
    */
   function returnFundsAndClearStrikes() external onlyVault {
     ExchangeRateParams memory exchangeParams = getExchangeParams();
     uint quoteBal = quoteAsset.balanceOf(address(this));
 
-    uint quoteReceived = 0;
     if (_isBaseCollat()) {
-      // todo: double check this
+      // exchange quote asset to base asset, and send base asset back to vault
       uint baseBal = baseAsset.balanceOf(address(this));
-      uint minQuoteExpected = baseBal.multiplyDecimal(exchangeParams.spotPrice).multiplyDecimal(
+      uint minQuoteExpected = quoteBal.divideDecimal(exchangeParams.spotPrice).multiplyDecimal(
         DecimalMath.UNIT - exchangeParams.baseQuoteFeeRate
       );
-      quoteReceived = exchangeFromExactBase(baseBal, minQuoteExpected);
+      uint baseReceived = exchangeFromExactQuote(quoteBal, minQuoteExpected);
+      require(baseAsset.transfer(address(vault), baseBal + baseReceived), "failed to return funds from strategy");
+    } else {
+      // send quote balance directly
+      require(quoteAsset.transfer(address(vault), quoteBal), "failed to return funds from strategy");
     }
-    require(quoteAsset.transfer(address(vault), quoteBal + quoteReceived), "failed to return funds from strategy");
 
     _clearAllActiveStrikes();
   }
@@ -267,36 +271,42 @@ contract DeltaStrategy is VaultAdapter, IStrategy {
   /**
    * @dev use premium in strategy to reduce position size if collateral ratio is out of range
    */
-  function reducePosition(uint positionId, address lyraRewardRecipient) external onlyVault {
+  function reducePosition(
+    uint positionId,
+    uint closeAmount,
+    address lyraRewardRecipient
+  ) external onlyVault {
     OptionPosition memory position = getPositions(_toDynamic(positionId))[0];
     Strike memory strike = getStrikes(_toDynamic(position.strikeId))[0];
-    ExchangeRateParams memory exchangeParams = getExchangeParams();
-
-    require(strikeToPositionId[position.strikeId] != positionId, "invalid positionId");
+    require(strikeToPositionId[position.strikeId] == positionId, "invalid positionId");
 
     // only allows closing if collat < minBuffer
-    uint minCollatPerAmount = _getBufferCollateral(strike.strikePrice, strike.expiry, exchangeParams.spotPrice, 1e18);
     require(
-      position.collateral < minCollatPerAmount.multiplyDecimal(position.amount),
-      "position properly collateralized"
+      closeAmount <= getAllowedCloseAmount(position, strike.strikePrice, strike.expiry),
+      "amount exceeds allowed close amount"
     );
 
     // closes excess position with premium balance
-    uint closeAmount = position.amount - position.collateral.divideDecimal(minCollatPerAmount);
     uint maxExpectedPremium = _getPremiumLimit(strike, false);
-    TradeResult memory result = closePosition(
-      TradeInputParameters({
-        strikeId: position.strikeId,
-        positionId: position.positionId,
-        iterations: 3,
-        optionType: optionType,
-        amount: closeAmount,
-        setCollateralTo: position.collateral,
-        minTotalCost: type(uint).min,
-        maxTotalCost: maxExpectedPremium,
-        rewardRecipient: lyraRewardRecipient // set to zero address if don't want to wait for whitelist
-      })
-    );
+    TradeInputParameters memory tradeParams = TradeInputParameters({
+      strikeId: position.strikeId,
+      positionId: position.positionId,
+      iterations: 3,
+      optionType: optionType,
+      amount: closeAmount,
+      setCollateralTo: position.collateral,
+      minTotalCost: type(uint).min,
+      maxTotalCost: maxExpectedPremium,
+      rewardRecipient: lyraRewardRecipient // set to zero address if don't want to wait for whitelist
+    });
+
+    TradeResult memory result;
+    if (!_isOutsideDeltaCutoff(strike.id)) {
+      result = closePosition(tradeParams);
+    } else {
+      // will pay less competitive price to close position
+      result = forceClosePosition(tradeParams);
+    }
 
     require(result.totalCost <= maxExpectedPremium, "premium paid is above max expected premium");
 
@@ -310,13 +320,25 @@ contract DeltaStrategy is VaultAdapter, IStrategy {
     }
   }
 
+  /**
+   * @dev calculates the position amount required to stay above the buffer collateral
+   */
+  function getAllowedCloseAmount(
+    OptionPosition memory position,
+    uint strikePrice,
+    uint strikeExpiry
+  ) public view returns (uint closeAmount) {
+    ExchangeRateParams memory exchangeParams = getExchangeParams();
+    uint minCollatPerAmount = _getBufferCollateral(strikePrice, strikeExpiry, exchangeParams.spotPrice, 1e18);
+
+    closeAmount = position.collateral < minCollatPerAmount.multiplyDecimal(position.amount)
+      ? position.amount - position.collateral.divideDecimal(minCollatPerAmount)
+      : 0;
+  }
+
   ////////////////
   // Validation //
   ////////////////
-
-  function isValidBoard(Board memory board) public view returns (bool isValid) {
-    return _isValidExpiry(board.expiry);
-  }
 
   /**
    * @dev verify if the strike is valid for the strategy
@@ -400,6 +422,18 @@ contract DeltaStrategy is VaultAdapter, IStrategy {
     limitPremium = _isCall()
       ? minCallPremium.multiplyDecimal(currentStrategy.size)
       : minPutPremium.multiplyDecimal(currentStrategy.size);
+  }
+
+  /**
+   * @dev use latest optionMarket delta cutoff to determine whether trade delta is out of bounds
+   */
+  function _isOutsideDeltaCutoff(uint strikeId) internal view returns (bool) {
+    MarketParams memory marketParams = getMarketParams();
+    int deltaCutoff = int(DecimalMath.UNIT) - marketParams.deltaCutOff;
+
+    int callDelta = getDeltas(_toDynamic(strikeId))[0];
+
+    return callDelta > deltaCutoff;
   }
 
   //////////////////////////////
