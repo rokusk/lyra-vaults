@@ -51,7 +51,7 @@ jobs:
           command: yarn compile
       - run:
           name: Check Contracts Size
-          command: yarn size
+          command: yarn run hardhat size-contracts
       - run:
           name: Run Tests
           command: yarn test
